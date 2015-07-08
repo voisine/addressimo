@@ -1,0 +1,172 @@
+<div class="container-fluid">
+
+    <form role="form" name="editForm">
+
+        <div class="form-group" ng-if="data.id">
+            <h2>ID: {{ data.id }}</h2>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.master_public_key.$invalid && !editForm.master_public_key.$pristine }">
+            <label for="master_public_key">Master Public key</label><br>
+            <textarea rows="2" cols="100" type="text" name="master_public_key" ng-model="data.master_public_key" id="master_public_key"></textarea>
+
+            <p ng-show="editForm.master_public_key.$invalid && !editForm.master_public_key.$pristine" class="help-block">
+                Please enter a master public key.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.private_key.$invalid && !editForm.private_key.$pristine }">
+            <label for="private_key">Private Key</label>
+            <span class="glyphicon glyphicon-trash" ng-click="deletePrivKey()"></span><br>
+            <textarea rows="20" cols="100" type="text" name="private_key" ng-model="data.private_key" id="private_key"
+                    placeholder="Private key hidden. Click the trashcan to delete or enter a new private key to update."></textarea>
+
+            <p ng-show="editForm.private_key.$invalid && !editForm.private_key.$pristine" class="help-block">
+                Please enter a private key.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.x509_cert.$invalid && !editForm.x509_cert.$pristine }">
+            <label for="x509_cert">x509 Certificate</label><br>
+            <textarea rows="20" cols="100" type="text" name="x509_cert" ng-model="data.x509_cert" id="x509_cert"></textarea>
+
+            <p ng-show="editForm.x509_cert.$invalid && !editForm.x509_cert.$pristine" class="help-block">
+                Please enter an x509 certificate.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.bip32_enabled.$invalid && !editForm.bip32_enabled.$pristine }">
+            <label for="bip32_enabled">BIP32 Enabled</label>
+            <input type="checkbox" name="bip32_enabled" ng-model="data.bip32_enabled" id="bip32_enabled">
+
+            <p ng-show="editForm.bip32_enabled.$invalid && !editForm.bip32_enabled.$pristine" class="help-block">
+                Please select true or false.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.last_generated_index.$invalid && !editForm.last_generated_index.$pristine }">
+            <label for="bip70_static_amount">Address Last Generated From Index</label>
+            <input type="number" name="last_generated_index" ng-model="data.last_generated_index" id="last_generated_index">
+
+            <p ng-show="editForm.last_generated_index.$invalid && !editForm.last_generated_index.$pristine" class="help-block">
+                Last generated index should be an integer.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.last_used_index.$invalid && !editForm.last_used_index.$pristine }">
+            <label for="last_used_index">Address Last Used Index</label>
+            <input type="number" name="last_used_index" ng-model="data.last_used_index" id="last_used_index">
+
+            <p ng-show="editForm.last_used_index.$invalid && !editForm.last_used_index.$pristine" class="help-block">
+                Last used index should be an integer.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.wallet_address.$invalid && !editForm.wallet_address.$pristine }">
+            <label for="last_used_index">Static Wallet Address</label>
+            <input type="text" name="wallet_address" ng-model="data.wallet_address" id="wallet_address" style="min-width: 24em;">
+
+            <p ng-show="editForm.wallet_address.$invalid && !editForm.wallet_address.$pristine" class="help-block">
+                Please enter a static wallet address to be used for all wallet address requests or payment request.</p>
+        </div>
+
+
+        <h3 style="padding: 1em 0 0 0;">Payment Request Options</h3>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.bip70_enabled.$invalid && !editForm.bip70_enabled.$pristine }">
+            <label for="bip70_enabled">BIP70 Enabled</label>
+            <input type="checkbox" name="bip70_enabled" ng-model="data.bip70_enabled" id="bip70_enabled">
+
+            <p ng-show="editForm.bip70_enabled.$invalid && !editForm.bip70_enabled.$pristine" class="help-block">
+                Please select true or false.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.bip70_static_amount.$invalid && !editForm.bip70_static_amount.$pristine }">
+            <label for="bip70_static_amount">BIP70 Static Amount (in BTC)</label>
+            <input type="number" name="bip70_static_amount" ng-model="data.bip70_static_amount" id="bip70_static_amount">
+
+            <p ng-show="editForm.bip70_static_amount.$invalid && !editForm.bip70_static_amount.$pristine" class="help-block">
+                Please select a static bip70 amount to be used for all payment requests.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.presigned_only.$invalid && !editForm.presigned_only.$pristine }">
+            <label for="presigned_only">Presigned Only</label>
+            <input type="checkbox" name="presigned_only" ng-model="data.presigned_only" id="presigned_only">
+
+            <p ng-show="editForm.presigned_only.$invalid && !editForm.presigned_only.$pristine" class="help-block">
+                Please select true or false.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.expires.$invalid && !editForm.expires.$pristine }">
+            <label for="presigned_only">Expires in from creation (seconds)</label>
+            <input type="number" name="expires" ng-model="data.expires" id="expires">
+
+            <p ng-show="editForm.expires.$invalid && !editForm.expires.$pristine" class="help-block">
+                Please enter an expiration time for your payment request in seconds.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.memo.$invalid && !editForm.memo.$pristine }">
+            <label for="memo">Default memo</label>
+            <input type="text" name="memo" ng-model="data.memo" id="memo">
+
+            <p ng-show="editForm.memo.$invalid && !editForm.memo.$pristine" class="help-block">
+                Please enter a default memo to be included in all payment requests.</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.payment_url.$invalid && !editForm.payment_url.$pristine }">
+            <label for="payment_url">Payment URL</label>
+            <input type="url" name="payment_url" ng-model="data.payment_url" id="payment_url">
+
+            <p ng-show="editForm.payment_url.$invalid && !editForm.payment_url.$pristine" class="help-block">
+                Please enter the payment URL to be used in all payment requests</p>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.merchant_data.$invalid && !editForm.merchant_data.$pristine }">
+            <label for="merchant_data">Merchant Data</label>
+            <input type="text" name="merchant_data" ng-model="data.merchant_data" id="merchant_data">
+
+            <p ng-show="editForm.merchant_data.$invalid && !editForm.merchant_data.$pristine" class="help-block">
+                Please enter the merchant data to be included in all payment requests</p>
+        </div>
+
+        <div class="form-group">
+            <label for="merchant_data">Stored Payment Requests Count:</label>
+            <span style="font-weight: 400">{{ data.presigned_payment_requests.length }}</span>
+        </div>
+
+        <div class="form-group"
+             ng-class="{ 'has-error' : editForm.auth_public_key.$invalid && !editForm.auth_public_key.$pristine }">
+            <label for="auth_public_key">Store and Forward Authentication Public Key</label><br>
+            <textarea rows="20" cols="100" type="text" name="auth_public_key" ng-model="data.auth_public_key" id="auth_public_key"></textarea>
+
+            <p ng-show="editForm.auth_public_key.$invalid && !editForm.auth_public_key.$pristine" class="help-block">
+                Please provide a valid public_key used to authenticate for store and forward payment requests</p>
+        </div>
+
+    </form>
+
+    <div class="col-xs-12 col-sm-6 alert alert-danger alert-dismissible" role="alert" ng-if="error_message">
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      {{ error_message }}
+    </div>
+
+    <div class="col-xs-12 col-sm-6 alert alert-success alert-dismissible" role="alert" ng-if="message">
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      {{ message }}
+    </div>
+
+    <div class="col-xs-12" style="padding: 0 0 5em 1em;">
+        <button ng-click="loadID(data.id); message=''; error_message='';">Undo</button>
+        <button ng-click="delete()">Delete</button>
+        <button ng-click="save()">Save</button>
+    </div>
+
+</div>
