@@ -96,6 +96,3 @@ def delete_id_obj_priv_key(id):
 
     return create_json_response(True, 'Delete private key succeeded', 204)
 
-
-if __name__ == '__main__':
-    print get_id_objs(None)

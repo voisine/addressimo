@@ -60,10 +60,6 @@ rFhAxdbeHjwhElfusbIPLl8jNikPKYIjynm3P+4oTU8jzSqF6FiOTA==
         }
     }
 
-    @classmethod
-    def get_plugin_name(cls):
-        return 'LOCAL'
-
     def get_config(self, id):
         config = IdObject(id)
         val = self.obj_config.get(id)
@@ -71,10 +67,26 @@ rFhAxdbeHjwhElfusbIPLl8jNikPKYIjynm3P+4oTU8jzSqF6FiOTA==
             config[key] = value
         return config
 
+    def get_all_keys(self):
+        return ['1', '2', '3']
+
+    def get_branches(self, id):
+        return [123, 456, 789]
+
+    def get_lg_index(self, id, branch):
+        return [123]
+
+    def set_lg_index(self, id, branch, index):
+        log.info('Set lg_index called on LocalResolver [ID: %d | Branch: %d | Index: %d' % (id, branch, index))
+
     def save(self, id_obj):
         if not id_obj.id:
             id_obj.id = uuid4().hex
         log.info('Save called on LocalResolver [ID: %d]' % id_obj.id)
 
     def delete(self, id_obj):
-        log.inf('Delete called on LocalResolver [ID: %d]' % id_obj.id)
+        log.info('Delete called on LocalResolver [ID: %d]' % id_obj.id)
+
+    @classmethod
+    def get_plugin_name(cls):
+        return 'LOCAL'

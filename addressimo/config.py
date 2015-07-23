@@ -29,6 +29,7 @@ config.plugin_directories = [
 
 # Redis Setup
 config.redis_id_obj_uri = 'redis://localhost:6379/1'
+config.redis_address_branch_uri = 'redis://localhost:6379/13'
 config.redis_addr_cache_uri = 'redis://localhost:6379/14'
 config.redis_ratelimit_uri = 'redis://localhost:6379/15'
 config.redis_logdb_uri = 'redis://localhost:6379/5'
@@ -47,6 +48,10 @@ config.logger_api_endpoint = 'https://auditor.mydomain.com/log'
 config.bitcoin_user = 'bitcoinrpc'
 config.bitcoin_pass = '03fd3f1cba637e40e984611b50bed238'
 config.cache_blockheight_threshold = 2
+
+# Admin public key for authenticating signatures for signed requests to get_branches endpoint (hex encoded).
+# That endpoint is used for HD wallets to retrieve which branches Addressimo has served addresses for
+config.admin_public_key = 'ac79cd6b0ac5f2a6234996595cb2d91fceaa0b9d9a6495f12f1161c074587bd19ae86928bddea635c930c09ea9c7de1a6a9c468f9afd18fbaeed45d09564ded6'
 
 #config.signer_api_endpoint = 'https://signer.mydomain.com/sign'
 

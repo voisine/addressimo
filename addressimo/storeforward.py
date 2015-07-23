@@ -4,24 +4,12 @@ from addressimo.config import config
 from addressimo.data import IdObject
 from addressimo.paymentrequest.paymentrequest_pb2 import PaymentRequest, PaymentDetails
 from addressimo.plugin import PluginManager
-from addressimo.util import LogUtil, create_json_response
+from addressimo.util import LogUtil, create_json_response, get_id, requires_valid_signature
 
 from flask import request
 from functools import wraps
-from ecdsa.keys import VerifyingKey, BadDigestError, BadSignatureError
-from ecdsa import curves
-from uuid import uuid4
-
-from ecdsa.der import UnexpectedDER
 
 log = LogUtil.setup_logging()
-
-def get_id():
-
-    vals = request.url.rsplit('/',1)
-    if len(vals) == 2:
-        return vals[1]
-    return None
 
 def requires_public_key(f):
 
@@ -49,45 +37,6 @@ def requires_public_key(f):
         return create_json_response(False, 'ID Not Recognized', 404)
 
     return is_pubkey_for_id
-
-def requires_valid_signature(f):
-
-    @wraps(f)
-    def check_sig(*args, **kwargs):
-
-        id = get_id()
-        if not id:
-            log.info('ID Unavailable from request: %s' % request.url)
-            return create_json_response(False, 'Unknown Endpoint', 404)
-
-        if request.headers.get('x-signature'):
-            sig = request.headers.get('x-signature')
-        else:
-            log.info('No x-signature header present, Signature Check Failed [ID: %s]' % id)
-            return create_json_response(False, 'Missing x-signature header', 400)
-
-        try:
-            vk = VerifyingKey.from_string(request.headers.get('x-identity').decode('hex'), curve=curves.SECP256k1)
-        except UnexpectedDER as e:
-            log.info('Bad Key Format [ID: %s]: %s' % (id, str(e)))
-            return create_json_response(False, 'Bad Public Key Format', 400)
-
-        try:
-            verified = vk.verify(sig.decode('hex'), request.url + request.data)
-            if verified:
-                return f(*args, **kwargs)
-            else:
-                return create_json_response(False, 'Signature Verification Error', 401)
-
-        except BadDigestError as e:
-            log.info('Digest Error During Signature Validation [ID: %s]: %s' % (id, str(e)))
-            return create_json_response(False, 'Signature Verification Error', 401)
-
-        except BadSignatureError as e:
-            log.info('Bad Signature Encountered During Signature Validation [ID: %s]: %s' % (id, str(e)))
-            return create_json_response(False, 'Signature Verification Error', 401)
-
-    return check_sig
 
 class StoreForward:
 
@@ -187,6 +136,3 @@ class StoreForward:
             return create_json_response(False, 'Invalid Identifier', 404)
 
         return create_json_response(data={'payment_request_count': len(id_obj.presigned_payment_requests)})
-
-if __name__ == '__main__':
-    pass

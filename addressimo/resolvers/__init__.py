@@ -5,11 +5,11 @@ from redis import Redis
 
 from addressimo.blockchain import cache_up_to_date
 from addressimo.config import config
-from addressimo.crypto import generate_bip32_address_from_extended_pubkey, generate_payment_request, get_unused_presigned_payment_request
+from addressimo.crypto import generate_bip32_address_from_extended_pubkey, generate_payment_request, get_unused_presigned_payment_request, derive_branch
 from addressimo.signer.LocalSigner import LocalSigner
 from addressimo.plugin import PluginManager
 from addressimo.util import create_json_response, create_bip72_response
-from addressimo.util import LogUtil
+from addressimo.util import LogUtil, requires_valid_signature
 
 log = LogUtil.setup_logging()
 
@@ -122,19 +122,21 @@ def get_unused_bip32_address(id_obj):
     if not id_obj.master_public_key:
         raise ValueError('Master public key missing. Unable to generate bip32 address.')
 
-    lg_index = id_obj.last_generated_index
+    # Determine correct branch based on derive logic
+    branch = derive_branch()
+
+    # Get last generated index for the branch if it exists.
+    lg_index = PluginManager.get_plugin('RESOLVER', config.resolver_type).get_lg_index(id_obj.id, branch)
 
     while True:
-        wallet_addr = generate_bip32_address_from_extended_pubkey(id_obj.master_public_key, lg_index)
+        wallet_addr = generate_bip32_address_from_extended_pubkey(id_obj.master_public_key, branch, lg_index)
 
         if not redis_conn.get(wallet_addr):
-            log.info('New Wallet Address created [Address: %s | GenIndex: %s]' % (wallet_addr, lg_index))
-            id_obj.last_generated_index = lg_index
-            PluginManager.get_plugin('RESOLVER', config.resolver_type).save(id_obj)
+            log.info('New Wallet Address created [Address: %s | Branch: %s | GenIndex: %s]' % (wallet_addr, branch, lg_index))
+            PluginManager.get_plugin('RESOLVER', config.resolver_type).set_lg_index(id_obj.id, branch, lg_index)
             return wallet_addr
         else:
-            log.debug('Used Wallet Address found! Trying next index [GenIndex: %s]' % lg_index)
-            id_obj.last_used_index = lg_index
+            log.debug('Used Wallet Address found! Trying next index [Branch: %s | GenIndex: %s]' % (branch, lg_index))
             lg_index += 1
 
 def create_payment_request_response(wallet_addr, amount, id_obj):
@@ -159,6 +161,18 @@ def create_payment_request_response(wallet_addr, amount, id_obj):
     )
 
     return Response(response=pr, status=200, content_type=PR_MIMETYPE, headers={'Content-Transfer-Encoding': 'binary', 'Access-Control-Allow-Origin': '*'})
+
+@requires_valid_signature
+def return_used_branches(id):
+
+    if not config.admin_public_key:
+        log.info('No key provided in config, Failing [ID: %s]' % id)
+        return create_json_response(False, 'ID Not Recognized', 404)
+
+    if request.headers.get('x-identity') == config.admin_public_key:
+        return create_json_response(data={'branches': PluginManager.get_plugin('RESOLVER', config.resolver_type).get_branches(id)})
+
+    return create_json_response(False, 'ID Not Recognized', 404)
 
 def create_wallet_address_response(wallet_addr):
     return create_json_response(data={'wallet_address': wallet_addr})

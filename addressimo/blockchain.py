@@ -32,6 +32,3 @@ def get_block(blockheight):
     blockhash = conn.getblockhash(blockheight)
     return conn.proxy.getblock(blockhash, False)
 
-
-if __name__ == '__main__':
-    print cache_up_to_date()

@@ -39,6 +39,48 @@ class RedisResolver(BaseResolver):
             id_obj[key] = value
         return id_obj
 
+    def get_branches(self, id):
+
+        redis_client = Redis.from_url(config.redis_address_branch_uri)
+
+        try:
+            result = redis_client.hkeys(id)
+
+            if not result:
+                log.info('No branches are present [ID: %s]' % id)
+                return []
+
+            result = map(int, result)
+        except Exception as e:
+            log.error('Exception retrieving branches [ID: %s]: %s' % (id, str(e)))
+            return []
+
+        return result
+
+    def get_lg_index(self, id, branch):
+
+        lg_index = 0
+        redis_client = Redis.from_url(config.redis_address_branch_uri)
+
+        try:
+            lg_index = redis_client.hget(id, branch)
+        except Exception as e:
+            log.error('Exception retrieving lg_index from Redis [ID: %s | Branch: %s]: %s' % (id, branch, str(e)))
+
+        return int(lg_index) if lg_index else 0
+
+    def set_lg_index(self, id, branch, index):
+
+        redis_client = Redis.from_url(config.redis_address_branch_uri)
+
+        try:
+            result = redis_client.hset(id, branch, index)
+        except Exception as e:
+            log.error('Exception setting lg_index in Redis [ID: %s | Branch: %s] %s' % (id, branch, str(e)))
+            return None
+
+        return result
+
     def save(self, id_obj):
 
         redis_client = Redis.from_url(config.redis_id_obj_uri)
@@ -66,23 +108,6 @@ class RedisResolver(BaseResolver):
             log.info('Deleted IdObject to Redis [ID: %s]' % id_obj.id)
             return result
         except Exception as e:
-            log.info('Unable to Delete IdObject to Redis [ID: %s]: %s' % (id, str(e)))
+            log.info('Unable to Delete IdObject to Redis [ID: %s]: %s' % (id_obj.id, str(e)))
             raise
 
-
-if __name__ == '__main__':
-    from datetime import datetime, timedelta
-    from addressimo.data import IdObject
-
-    #io = IdObject(id=123456)
-    rr = RedisResolver()
-    io = rr.get_id_obj('123456')
-    io.bip70_static_amount = 9878987
-    #
-    # io.expires = int((datetime.utcnow() + timedelta(minutes=33)).strftime('%s'))
-    # io.memo = 'Hi my test memo here'
-    # io.payment_url = 'https://www.whosywhat.com'
-    # io.merchant_data = 'lang=el&basketId=11252'
-    #io.master_public_key = 'xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8'
-    rr.save(io)
-    #result = rr.get_id_obj('1234')

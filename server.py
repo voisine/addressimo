@@ -6,7 +6,7 @@ from flask import Flask, Response, request
 
 from addressimo.config import config
 from addressimo.plugin import PluginManager
-from addressimo.resolvers import resolve
+from addressimo.resolvers import resolve, return_used_branches
 from addressimo.storeforward import StoreForward
 from addressimo.util import create_json_response
 
@@ -64,6 +64,11 @@ def index():
 @limiter.limit("60 per minute")
 def resolve_id(id):
     return resolve(id)
+
+@app.route('/branches/<id>', methods=['GET'])
+@limiter.limit("10 per minute")
+def get_used_branches(id):
+    return return_used_branches(id)
 
 @app.route('/sf', methods=['POST'])
 @limiter.limit("10 per minute")

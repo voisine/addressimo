@@ -1,9 +1,12 @@
 __author__ = 'Matt David'
 
-from mock import patch, Mock
+from mock import patch, Mock, MagicMock
 from test import AddressimoTestCase
 
 from addressimo.util import *
+
+TEST_PRIVKEY = '9d5a020344dd6dffc8a79e9c0bce8148ab0bce08162b6a44fec40cb113e16647'
+TEST_PUBKEY = 'ac79cd6b0ac5f2a6234996595cb2d91fceaa0b9d9a6495f12f1161c074587bd19ae86928bddea635c930c09ea9c7de1a6a9c468f9afd18fbaeed45d09564ded6'
 
 class Test_create_json_response(AddressimoTestCase):
 
@@ -279,6 +282,168 @@ class Test_create_bip72_response(AddressimoTestCase):
         self.assertEqual('X-Requested-With, accept, content-type', respargs['headers']['Access-Control-Allow-Headers'])
         self.assertEqual('PUT, POST, OPTIONS', respargs['headers']['Access-Control-Allow-Methods'])
         self.assertEqual('http://127.0.0.1', respargs['headers']['Access-Control-Allow-Origin'])
+
+
+class TestGetId(AddressimoTestCase):
+
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.util.request')
+        self.mockRequest = self.patcher1.start()
+        self.mockRequest.url = 'http://addressimo.com/sf/0123456789abcdef'
+
+    def test_go_right(self):
+
+        ret_val = get_id()
+        self.assertEqual('0123456789abcdef', ret_val)
+
+    def test_no_id(self):
+
+        self.mockRequest.url = 'http://addressimo.com/random'
+        ret_val = get_id()
+        self.assertEqual('random', ret_val)
+
+
+# NOTE: Since we're also verifying the functionality of the ECDSA library and args passed, we cannot
+# mock the VerifyingKey itself, just the way it's created
+class TestRequiresValidSignature(AddressimoTestCase):
+
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.util.get_id')
+        self.patcher2 = patch('addressimo.util.create_json_response')
+        self.patcher3 = patch('addressimo.util.request')
+        self.patcher4 = patch('addressimo.util.VerifyingKey', wraps=VerifyingKey)
+
+        self.mockGetId = self.patcher1.start()
+        self.mockCreateJsonResponse = self.patcher2.start()
+        self.mockRequest = self.patcher3.start()
+        self.mockVerifyingKey = self.patcher4.start()
+
+        self.mockRequest.url = 'http://addressimo.com/sf/0123456789abcdef'
+        self.mockRequest.data = 'this is some crazy random data, dude! you know you gotta love this!'
+
+        from ecdsa.keys import SigningKey
+        from ecdsa.curves import SECP256k1
+
+        sk = SigningKey.from_string(TEST_PRIVKEY.decode('hex'), curve=SECP256k1)
+        sig = sk.sign(self.mockRequest.url + self.mockRequest.data)
+
+        self.mockRequest.headers = {
+            'x-identity': TEST_PUBKEY,
+            'x-signature': sig.encode('hex')
+        }
+
+        self.mockIdObj = Mock()
+        self.mockIdObj.auth_public_key = TEST_PUBKEY
+
+        # Mock the decorator function -> We run self.decorated
+        self.mock_func = MagicMock(return_value='fake_response')
+        self.mock_func.__name__ = 'mock_func'
+        self.decorated = requires_valid_signature(self.mock_func)
+
+    def test_go_right(self):
+
+        self.decorated()
+
+        self.assertEqual(1, self.mockGetId.call_count)
+        self.assertEqual(1, self.mockVerifyingKey.from_string.call_count)
+        self.assertEqual(TEST_PUBKEY.decode('hex'), self.mockVerifyingKey.from_string.call_args[0][0])
+        self.assertEqual(curves.SECP256k1, self.mockVerifyingKey.from_string.call_args[1]['curve'])
+        self.assertEqual(1, self.mock_func.call_count)
+        self.assertEqual(0, self.mockCreateJsonResponse.call_count)
+
+    def test_missing_id(self):
+
+        self.mockGetId.return_value = None
+
+        self.decorated()
+
+        self.assertEqual(1, self.mockGetId.call_count)
+        self.assertEqual(0, self.mockVerifyingKey.from_string.call_count)
+        self.assertEqual(0, self.mock_func.call_count)
+        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
+        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
+        self.assertEqual('Unknown Endpoint', self.mockCreateJsonResponse.call_args[0][1])
+        self.assertEqual(404, self.mockCreateJsonResponse.call_args[0][2])
+
+    def test_missing_sig(self):
+
+        del self.mockRequest.headers['x-signature']
+
+        self.decorated()
+
+        self.assertEqual(1, self.mockGetId.call_count)
+        self.assertEqual(0, self.mockVerifyingKey.from_string.call_count)
+        self.assertEqual(0, self.mock_func.call_count)
+        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
+        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
+        self.assertEqual('Missing x-signature header', self.mockCreateJsonResponse.call_args[0][1])
+        self.assertEqual(400, self.mockCreateJsonResponse.call_args[0][2])
+
+    def test_verifying_key_creation_exception(self):
+
+        self.mockVerifyingKey.from_string.side_effect = UnexpectedDER()
+
+        self.decorated()
+
+        self.assertEqual(1, self.mockGetId.call_count)
+        self.assertEqual(1, self.mockVerifyingKey.from_string.call_count)
+        self.assertEqual(TEST_PUBKEY.decode('hex'), self.mockVerifyingKey.from_string.call_args[0][0])
+        self.assertEqual(curves.SECP256k1, self.mockVerifyingKey.from_string.call_args[1]['curve'])
+        self.assertEqual(0, self.mock_func.call_count)
+        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
+        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
+        self.assertEqual('Bad Public Key Format', self.mockCreateJsonResponse.call_args[0][1])
+        self.assertEqual(400, self.mockCreateJsonResponse.call_args[0][2])
+
+    def test_bad_signature(self):
+
+        self.mockRequest.headers['x-signature'] = 'thisreallydoesntwork,butihopeyouthinkitdoesfdfdfd423324fff5555FF'.encode('hex')
+
+        self.decorated()
+
+        self.assertEqual(1, self.mockGetId.call_count)
+        self.assertEqual(1, self.mockVerifyingKey.from_string.call_count)
+        self.assertEqual(TEST_PUBKEY.decode('hex'), self.mockVerifyingKey.from_string.call_args[0][0])
+        self.assertEqual(curves.SECP256k1, self.mockVerifyingKey.from_string.call_args[1]['curve'])
+        self.assertEqual(0, self.mock_func.call_count)
+        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
+        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
+        self.assertEqual('Signature Verification Error', self.mockCreateJsonResponse.call_args[0][1])
+        self.assertEqual(401, self.mockCreateJsonResponse.call_args[0][2])
+
+    def test_bad_digest_error(self):
+
+        self.mockVerifyingKey.from_string.return_value.verify.side_effect = BadDigestError()
+
+        self.decorated()
+
+        self.assertEqual(1, self.mockGetId.call_count)
+        self.assertEqual(1, self.mockVerifyingKey.from_string.call_count)
+        self.assertEqual(TEST_PUBKEY.decode('hex'), self.mockVerifyingKey.from_string.call_args[0][0])
+        self.assertEqual(curves.SECP256k1, self.mockVerifyingKey.from_string.call_args[1]['curve'])
+        self.assertEqual(0, self.mock_func.call_count)
+        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
+        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
+        self.assertEqual('Signature Verification Error', self.mockCreateJsonResponse.call_args[0][1])
+        self.assertEqual(401, self.mockCreateJsonResponse.call_args[0][2])
+
+    def test_bad_signature_error(self):
+
+        self.mockVerifyingKey.from_string.return_value.verify.side_effect = BadSignatureError()
+
+        self.decorated()
+
+        self.assertEqual(1, self.mockGetId.call_count)
+        self.assertEqual(1, self.mockVerifyingKey.from_string.call_count)
+        self.assertEqual(TEST_PUBKEY.decode('hex'), self.mockVerifyingKey.from_string.call_args[0][0])
+        self.assertEqual(curves.SECP256k1, self.mockVerifyingKey.from_string.call_args[1]['curve'])
+        self.assertEqual(0, self.mock_func.call_count)
+        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
+        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
+        self.assertEqual('Signature Verification Error', self.mockCreateJsonResponse.call_args[0][1])
+        self.assertEqual(401, self.mockCreateJsonResponse.call_args[0][2])
 
 
 class TestSetupLogging(AddressimoTestCase):

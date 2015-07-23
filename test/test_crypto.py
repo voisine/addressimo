@@ -5,6 +5,36 @@ from test import AddressimoTestCase
 
 from addressimo.crypto import *
 
+class TestDeriveBranch(AddressimoTestCase):
+    def setUp(self):
+        self.patcher1 = patch('addressimo.crypto.iptools')
+        self.patcher2 = patch('addressimo.crypto.request')
+
+        self.mockIpTools = self.patcher1.start()
+        self.mockRequest = self.patcher2.start()
+
+    def testGoRightAbove2147483648(self):
+
+        # Setup Test Case
+        self.mockIpTools.ipv4.ip2long.return_value = 3000000000
+
+        ret_val = derive_branch()
+
+        self.assertEqual(24064, ret_val)
+        self.assertEqual(1, self.mockIpTools.ipv4.ip2long.call_count)
+        self.assertEqual(self.mockRequest.remote_addr, self.mockIpTools.ipv4.ip2long.call_args[0][0])
+
+    def testGoRightBelow2147483648(self):
+
+        # Setup Test Case
+        self.mockIpTools.ipv4.ip2long.return_value = 1000000000
+
+        ret_val = derive_branch()
+
+        self.assertEqual(51712, ret_val)
+        self.assertEqual(1, self.mockIpTools.ipv4.ip2long.call_count)
+        self.assertEqual(self.mockRequest.remote_addr, self.mockIpTools.ipv4.ip2long.call_args[0][0])
+
 class TestGenerateBIP32AddressFromExtendedPublicKey(AddressimoTestCase):
 
     def setUp(self):
@@ -14,17 +44,16 @@ class TestGenerateBIP32AddressFromExtendedPublicKey(AddressimoTestCase):
 
     def test_go_right(self):
 
-        ret_val = generate_bip32_address_from_extended_pubkey('xpub_extended_pubkey', 0)
+        ret_val = generate_bip32_address_from_extended_pubkey('xpub_extended_pubkey', 1231244, 3)
 
-        self.assertEqual(self.mockBIP32Node.from_wallet_key.return_value.subkey.return_value.address.return_value, ret_val)
+        self.assertEqual(self.mockBIP32Node.from_wallet_key.return_value.subkey_for_path.return_value.address.return_value, ret_val)
 
         self.assertEqual(1, self.mockBIP32Node.from_wallet_key.call_count)
         self.assertEqual('xpub_extended_pubkey', self.mockBIP32Node.from_wallet_key.call_args[0][0])
 
-        self.assertEqual(1, self.mockBIP32Node.from_wallet_key.return_value.subkey.call_count)
-        self.assertEqual(0, self.mockBIP32Node.from_wallet_key.return_value.subkey.call_args[0][0])
-        self.assertFalse(self.mockBIP32Node.from_wallet_key.return_value.subkey.call_args[1]['is_hardened'])
-        self.assertEqual(1, self.mockBIP32Node.from_wallet_key.return_value.subkey.return_value.address.call_count)
+        self.assertEqual(1, self.mockBIP32Node.from_wallet_key.return_value.subkey_for_path.call_count)
+        self.assertEqual('1231244/3', self.mockBIP32Node.from_wallet_key.return_value.subkey_for_path.call_args[0][0])
+        self.assertEqual(1, self.mockBIP32Node.from_wallet_key.return_value.subkey_for_path.return_value.address.call_count)
 
 class TestGetCerts(AddressimoTestCase):
 
@@ -204,8 +233,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
         self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('LOGGER', self.mockPluginManager.get_plugin.call_args[0][0])
 
-        self.assertEqual(1, self.mockGetCerts.call_count)
-        self.assertEqual(self.x509_cert, self.mockGetCerts.call_args[0][0])
+        self.assertEqual(0, self.mockGetCerts.call_count)
 
         self.assertEqual(2, self.mockDatetime.utcnow.call_count)
         self.assertEqual(0, self.mockSigner.sign.call_count)
@@ -213,8 +241,8 @@ class GeneratePaymentRequest(AddressimoTestCase):
         pr = PaymentRequest()
         pr.ParseFromString(ret_val)
         self.assertEqual(1, pr.payment_details_version)
-        self.assertEqual('\n\x05cert1\n\x05cert2', pr.pki_data)
-        self.assertEqual('x509', pr.pki_type)
+        self.assertEqual('', pr.pki_data)
+        self.assertEqual('none', pr.pki_type)
         self.assertEqual('', pr.signature)
 
         pd = PaymentDetails()

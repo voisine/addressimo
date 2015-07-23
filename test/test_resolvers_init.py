@@ -538,19 +538,22 @@ class TestGetUnusedBip32Address(AddressimoTestCase):
         self.patcher1 = patch('addressimo.resolvers.generate_bip32_address_from_extended_pubkey')
         self.patcher2 = patch('addressimo.resolvers.PluginManager')
         self.patcher3 = patch('addressimo.resolvers.redis_conn')
+        self.patcher4 = patch('addressimo.resolvers.derive_branch')
 
         self.mockGenerateBip32Address = self.patcher1.start()
         self.mockPluginManager = self.patcher2.start()
         self.mockRedis = self.patcher3.start()
+        self.mockDeriveBranch = self.patcher4.start()
 
         # Setup id_obj data
         self.mock_id_obj = Mock()
-        self.mock_id_obj.last_used_index = 4
-        self.mock_id_obj.last_generated_index = 5
         self.mock_id_obj.master_public_key = 'mykey'
 
         # Redis setup to denote address not in use
         self.mockRedis.get.return_value = False
+
+        # Set get_lg_index return value to simplify testing and validation
+        self.mockLgIndex = self.mockPluginManager.get_plugin.return_value.get_lg_index.return_value = 4
 
     def test_go_right_one_iteration(self):
 
@@ -560,19 +563,22 @@ class TestGetUnusedBip32Address(AddressimoTestCase):
         self.assertEqual(self.mockGenerateBip32Address.return_value, ret_val)
 
         # Validate call count and call args
+        self.assertEqual(1, self.mockDeriveBranch.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_lg_index.call_count)
         self.assertEqual(1, self.mockRedis.get.call_count)
 
+        # Validate call arguments for bip32 address generation
         self.assertEqual(1, self.mockGenerateBip32Address.call_count)
         call_args = self.mockGenerateBip32Address.call_args_list[0][0]
         self.assertEqual(self.mock_id_obj.master_public_key, call_args[0])
-        self.assertEqual(self.mock_id_obj.last_generated_index, call_args[1])
+        self.assertEqual(self.mockDeriveBranch.return_value, call_args[1])
+        self.assertEqual(4, call_args[2])
 
-        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.save.call_count)
-        self.assertEqual(self.mock_id_obj, self.mockPluginManager.get_plugin.return_value.save.call_args_list[0][0][0])
-
-        # Validate id_obj data
-        self.assertEqual(4, self.mock_id_obj.last_used_index)
-        self.assertEqual(5, self.mock_id_obj.last_generated_index)
+        # Validate call arguments saving lg_index to redis
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_lg_index.call_count)
+        self.assertEqual(self.mock_id_obj.id, self.mockPluginManager.get_plugin.return_value.set_lg_index.call_args[0][0])
+        self.assertEqual(self.mockDeriveBranch.return_value, self.mockPluginManager.get_plugin.return_value.set_lg_index.call_args[0][1])
+        self.assertEqual(4, self.mockPluginManager.get_plugin.return_value.set_lg_index.call_args[0][2])
 
     def test_go_right_two_iterations(self):
 
@@ -585,21 +591,25 @@ class TestGetUnusedBip32Address(AddressimoTestCase):
         self.assertEqual(self.mockGenerateBip32Address.return_value, ret_val)
 
         # Validate call count and call args
+        self.assertEqual(1, self.mockDeriveBranch.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_lg_index.call_count)
         self.assertEqual(2, self.mockRedis.get.call_count)
 
+        # Validate call arguments for bip32 address generation
         self.assertEqual(2, self.mockGenerateBip32Address.call_count)
         call_args = self.mockGenerateBip32Address.call_args_list
         self.assertEqual(self.mock_id_obj.master_public_key, call_args[0][0][0])
-        self.assertEqual(5, call_args[0][0][1])
+        self.assertEqual(self.mockDeriveBranch.return_value, call_args[0][0][1])
+        self.assertEqual(4, call_args[0][0][2])
         self.assertEqual(self.mock_id_obj.master_public_key, call_args[1][0][0])
-        self.assertEqual(6, call_args[1][0][1])
+        self.assertEqual(self.mockDeriveBranch.return_value, call_args[1][0][1])
+        self.assertEqual(5, call_args[1][0][2])
 
-        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.save.call_count)
-        self.assertEqual(self.mock_id_obj, self.mockPluginManager.get_plugin.return_value.save.call_args_list[0][0][0])
-
-        # Validate id_obj data
-        self.assertEqual(5, self.mock_id_obj.last_used_index)
-        self.assertEqual(6, self.mock_id_obj.last_generated_index)
+        # Validate call arguments saving lg_index to redis
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_lg_index.call_count)
+        self.assertEqual(self.mock_id_obj.id, self.mockPluginManager.get_plugin.return_value.set_lg_index.call_args[0][0])
+        self.assertEqual(self.mockDeriveBranch.return_value, self.mockPluginManager.get_plugin.return_value.set_lg_index.call_args[0][1])
+        self.assertEqual(5, self.mockPluginManager.get_plugin.return_value.set_lg_index.call_args[0][2])
 
     def test_master_public_key_missing(self):
 
@@ -617,7 +627,6 @@ class TestGetUnusedBip32Address(AddressimoTestCase):
         self.assertEqual(0, self.mockRedis.get.call_count)
         self.assertEqual(0, self.mockGenerateBip32Address.call_count)
         self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.save.call_count)
-
 
 class TestCreatePaymentRequestResponse(AddressimoTestCase):
     def setUp(self):
@@ -682,6 +691,66 @@ class TestCreatePaymentRequestResponse(AddressimoTestCase):
         self.assertEqual(0, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.set_id_obj.call_count)
         self.assertEqual(0, self.mockResponse.call_count)
+
+class TestReturnUsedBranches(AddressimoTestCase):
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.create_json_response')
+        self.patcher2 = patch('addressimo.resolvers.PluginManager')
+        self.patcher3 = patch('addressimo.resolvers.request')
+
+        self.mockCreateJSONResponse = self.patcher1.start()
+        self.mockPluginManager = self.patcher2.start()
+        self.mockRequest = self.patcher3.start()
+
+        # Set return value for get_branches to use in response validation
+        self.mockPluginManager.get_plugin.return_value.get_branches.return_value = [123, 456]
+
+        #################################################################
+        # Mock to Pass @requires_valid_signature & @requires_public_key
+        self.patcher100 = patch('addressimo.util.get_id')
+        self.patcher101 = patch('addressimo.util.VerifyingKey')
+        self.patcher102 = patch('addressimo.util.request')
+
+        self.mockGetId = self.patcher100.start()
+        self.mockVerifyingKey = self.patcher101.start()
+        self.mockUtilRequest = self.patcher102.start()
+
+        self.mockRequest.headers = {
+            'x-signature': 'sigF'.encode('hex'),
+            'x-identity': 'ac79cd6b0ac5f2a6234996595cb2d91fceaa0b9d9a6495f12f1161c074587bd19ae86928bddea635c930c09ea9c7de1a6a9c468f9afd18fbaeed45d09564ded6'
+        }
+
+        self.mockVerifyingKey.from_string.return_value.verify.return_value = True
+
+        config.admin_public_key = 'ac79cd6b0ac5f2a6234996595cb2d91fceaa0b9d9a6495f12f1161c074587bd19ae86928bddea635c930c09ea9c7de1a6a9c468f9afd18fbaeed45d09564ded6'
+
+    def test_go_right(self):
+
+        return_used_branches(1)
+
+        self.assertDictEqual({'branches': [123, 456]}, self.mockCreateJSONResponse.call_args[1].get('data'))
+
+    def test_admin_public_key_missing(self):
+
+        # Setup Test case
+        config.admin_public_key = None
+
+        return_used_branches(1)
+
+        self.assertFalse(self.mockCreateJSONResponse.call_args[0][0])
+        self.assertEqual('ID Not Recognized', self.mockCreateJSONResponse.call_args[0][1])
+        self.assertEqual(404, self.mockCreateJSONResponse.call_args[0][2])
+
+    def test_x_identity_header_does_not_match_admin_public_key(self):
+
+        # Setup Test case
+        config.admin_public_key = 'does not match'
+
+        return_used_branches(1)
+
+        self.assertFalse(self.mockCreateJSONResponse.call_args[0][0])
+        self.assertEqual('ID Not Recognized', self.mockCreateJSONResponse.call_args[0][1])
+        self.assertEqual(404, self.mockCreateJSONResponse.call_args[0][2])
 
 class TestCreateWalletAddressResponse(AddressimoTestCase):
     def setUp(self):

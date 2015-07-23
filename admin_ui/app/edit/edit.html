@@ -45,24 +45,6 @@
         </div>
 
         <div class="form-group"
-             ng-class="{ 'has-error' : editForm.last_generated_index.$invalid && !editForm.last_generated_index.$pristine }">
-            <label for="bip70_static_amount">Address Last Generated From Index</label>
-            <input type="number" name="last_generated_index" ng-model="data.last_generated_index" id="last_generated_index">
-
-            <p ng-show="editForm.last_generated_index.$invalid && !editForm.last_generated_index.$pristine" class="help-block">
-                Last generated index should be an integer.</p>
-        </div>
-
-        <div class="form-group"
-             ng-class="{ 'has-error' : editForm.last_used_index.$invalid && !editForm.last_used_index.$pristine }">
-            <label for="last_used_index">Address Last Used Index</label>
-            <input type="number" name="last_used_index" ng-model="data.last_used_index" id="last_used_index">
-
-            <p ng-show="editForm.last_used_index.$invalid && !editForm.last_used_index.$pristine" class="help-block">
-                Last used index should be an integer.</p>
-        </div>
-
-        <div class="form-group"
              ng-class="{ 'has-error' : editForm.wallet_address.$invalid && !editForm.wallet_address.$pristine }">
             <label for="last_used_index">Static Wallet Address</label>
             <input type="text" name="wallet_address" ng-model="data.wallet_address" id="wallet_address" style="min-width: 24em;">

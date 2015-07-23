@@ -1,7 +1,9 @@
 __author__ = 'Matt David'
 
+import iptools
 import ssl
 from datetime import datetime, timedelta
+from flask import request
 from pybitcointools import serialize_script, b58check_to_hex, hex_to_b58check, deserialize_script
 from pycoin.key.BIP32Node import BIP32Node
 from redis import Redis
@@ -21,10 +23,21 @@ OP_CHECKSIG = 172
 
 log = LogUtil.setup_logging()
 
-def generate_bip32_address_from_extended_pubkey(extended_pubkey, index):
+def derive_branch():
+    branch = iptools.ipv4.ip2long(request.remote_addr)
+
+    # This method will have a collision occasionally between two IP addresses.
+    if branch > 2**31:
+        branch %= 2**31
+
+    # Use last two octets of the IP for branch uniqueness
+    return branch & 0x0000ffff
+
+def generate_bip32_address_from_extended_pubkey(extended_pubkey, branch, index):
 
     ext_key = BIP32Node.from_wallet_key(extended_pubkey)
-    return ext_key.subkey(index, is_hardened=False).address()
+
+    return ext_key.subkey_for_path('%d/%d' % (branch, index)).address()
 
 def get_certs(x509_pem_format):
 
@@ -85,7 +98,7 @@ def generate_payment_request(crypto_addr, x509_cert, signer=None, amount=0, expi
     # Set PKI Type / Data
     if not x509_cert or not signer:
         payment_request.pki_type = 'none'
-        payment_request.pki_data = None
+        payment_request.pki_data = ''
     else:
 
         payment_request.pki_type = signer.get_pki_type()

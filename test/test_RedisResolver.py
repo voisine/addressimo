@@ -86,6 +86,121 @@ class TestGetIdObj(AddressimoTestCase):
         self.assertIsNone(ret_obj)
 
 
+class TestGetBranches(AddressimoTestCase):
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        # Setup redis return data
+        self.mockRedis.from_url.return_value.hkeys.return_value = ['123', '456']
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        ret_val = self.rr.get_branches(111)
+
+        self.assertListEqual([123, 456], ret_val)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hkeys.call_count)
+        self.assertEqual(111, self.mockRedis.from_url.return_value.hkeys.call_args[0][0])
+
+    def test_no_branches_present(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.hkeys.return_value = None
+
+        ret_val = self.rr.get_branches(111)
+
+        self.assertListEqual([], ret_val)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hkeys.call_count)
+        self.assertEqual(111, self.mockRedis.from_url.return_value.hkeys.call_args[0][0])
+
+    def test_exception_retrieving_branches(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.hkeys.side_effect = Exception('Lookup failed')
+
+        ret_val = self.rr.get_branches(111)
+
+        self.assertListEqual([], ret_val)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hkeys.call_count)
+        self.assertEqual(111, self.mockRedis.from_url.return_value.hkeys.call_args[0][0])
+
+
+class TestGetLGIndex(AddressimoTestCase):
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        # Setup redis return data
+        self.mockRedis.from_url.return_value.hget.return_value = '5'
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        ret_val = self.rr.get_lg_index(111, 1234)
+
+        self.assertEqual(5, ret_val)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hget.call_count)
+        self.assertEqual((111, 1234), self.mockRedis.from_url.return_value.hget.call_args[0])
+
+    def test_hget_returns_none(self):
+
+        # Setup Test case
+        self.mockRedis.from_url.return_value.hget.return_value = None
+
+        ret_val = self.rr.get_lg_index(111, 1234)
+
+        self.assertEqual(0, ret_val)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hget.call_count)
+        self.assertEqual((111, 1234), self.mockRedis.from_url.return_value.hget.call_args[0])
+
+    def test_exception_retrieving_lg_index(self):
+
+        # Setup Test case
+        self.mockRedis.from_url.return_value.hget.side_effect = Exception('Exception retrieving lg_index')
+
+        ret_val = self.rr.get_lg_index(111, 1234)
+
+        self.assertEqual(0, ret_val)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hget.call_count)
+        self.assertEqual((111, 1234), self.mockRedis.from_url.return_value.hget.call_args[0])
+
+
+class TestSetLGIndex(AddressimoTestCase):
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        ret_val = self.rr.set_lg_index(10, 123456, 7)
+
+        self.assertIsNotNone(ret_val)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hset.call_count)
+        self.assertEqual((10, 123456, 7), self.mockRedis.from_url.return_value.hset.call_args[0])
+
+    def test_exception_saving_lg_index(self):
+
+        # Setup Test case
+        self.mockRedis.from_url.return_value.hset.side_effect = Exception('Exception saving lg_index')
+
+        ret_val = self.rr.set_lg_index(10, 123456, 7)
+
+        self.assertIsNone(ret_val)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hset.call_count)
+        self.assertEqual((10, 123456, 7), self.mockRedis.from_url.return_value.hset.call_args[0])
+
+
 class TestSave(AddressimoTestCase):
     def setUp(self):
         self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')

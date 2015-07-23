@@ -29,8 +29,6 @@ class IdObject(AttrDict):
         self.bip32_enabled = False
         self.bip70_static_amount = None
         self.bip70_enabled = False
-        self.last_generated_index = 0
-        self.last_used_index = 0
         self.wallet_address = None
         self.expires = None
         self.memo = None
