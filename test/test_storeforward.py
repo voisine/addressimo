@@ -329,6 +329,30 @@ class TestAdd(AddressimoTestCase):
         self.assertEqual('Payment Request Must Be Hex Encoded', self.mockCreateJsonResponse.call_args[0][1])
         self.assertEqual(400, self.mockCreateJsonResponse.call_args[0][2])
 
+    def test_invalid_toolarge_pr(self):
+
+        self.mockRequest.get_json.return_value = {
+            'presigned_payment_requests': [
+                ('tooMuchData'*4600).encode('hex')
+            ]
+        }
+
+        StoreForward.add()
+
+        self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
+        self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(1, self.mockRequest.get_json.call_count)
+
+        self.assertEqual(0, len(self.mockIdObj.presigned_payment_requests))
+        self.assertEqual(0, self.mockResolver.save.call_count)
+
+        self.assertEqual(1, self.mockPaymentRequest.call_count)
+        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
+        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
+        self.assertEqual('Invalid Payment Request Submitted', self.mockCreateJsonResponse.call_args[0][1])
+        self.assertEqual(400, self.mockCreateJsonResponse.call_args[0][2])
+
     def test_payment_request_parse_exception(self):
 
         self.mockPaymentRequest.return_value.ParseFromString.side_effect = Exception

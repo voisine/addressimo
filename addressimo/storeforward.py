@@ -11,6 +11,8 @@ from functools import wraps
 
 log = LogUtil.setup_logging()
 
+PAYMENT_REQUEST_SIZE_MAX = 50000
+
 def requires_public_key(f):
 
     @wraps(f)
@@ -85,7 +87,13 @@ class StoreForward:
 
             verify_pr = PaymentRequest()
             try:
-                verify_pr.ParseFromString(pr.decode('hex'))
+
+                hex_decoded_pr = pr.decode('hex')
+                if len(hex_decoded_pr) > PAYMENT_REQUEST_SIZE_MAX:
+                    log.warn('Rejecting Payment Request for Size [ACCEPTED: %d bytes | ACTUAL: %d bytes]' % (PAYMENT_REQUEST_SIZE_MAX, len(hex_decoded_pr)))
+                    return create_json_response(False, 'Invalid Payment Request Submitted', 400)
+
+                verify_pr.ParseFromString(hex_decoded_pr)
             except Exception as e:
                 log.warn('Unable to Parse Submitted Payment Request [ID: %s]: %s' % (id_obj.id, str(e)))
                 return create_json_response(False, 'Invalid Payment Request Submitted', 400)
