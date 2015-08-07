@@ -84,6 +84,15 @@
         </div>
 
         <div class="form-group"
+             ng-class="{ 'has-error' : editForm.prr_only.$invalid && !editForm.prr_only.$pristine }">
+            <label for="prr_only">PR Request Only</label>
+            <input type="checkbox" name="prr_only" ng-model="data.prr_only" id="prr_only">
+
+            <p ng-show="editForm.prr_only.$invalid && !editForm.prr_only.$pristine" class="help-block">
+                Please select true or false.</p>
+        </div>
+
+        <div class="form-group"
              ng-class="{ 'has-error' : editForm.expires.$invalid && !editForm.expires.$pristine }">
             <label for="presigned_only">Expires in from creation (seconds)</label>
             <input type="number" name="expires" ng-model="data.expires" id="expires">

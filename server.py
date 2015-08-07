@@ -5,6 +5,7 @@ import logging
 from flask import Flask, Response, request
 
 from addressimo.config import config
+from addressimo.paymentrequest.prr import PRR
 from addressimo.plugin import PluginManager
 from addressimo.resolvers import resolve, return_used_branches
 from addressimo.storeforward import StoreForward
@@ -65,6 +66,11 @@ def index():
 def resolve_id(id):
     return resolve(id)
 
+@app.route('/resolve/<id>', methods=['POST'])
+@limiter.limit("60 per minute")
+def submit_pr_request(id):
+    return PRR.submit_prr(id)
+
 @app.route('/branches/<id>', methods=['GET'])
 @limiter.limit("10 per minute")
 def get_used_branches(id):
@@ -89,6 +95,21 @@ def remove_sf_endpoint(id):
 @limiter.limit("10 per minute")
 def sf_getcount(id):
     return StoreForward.get_count()
+
+@app.route('/prr/<id>', methods=['GET'])
+@limiter.limit("10 per minute")
+def get_prr(id):
+    return PRR.get_queued_pr_requests(id)
+
+@app.route('/prr/<id>', methods=['POST'])
+@limiter.limit("10 per minute")
+def submit_return_pr(id):
+    return PRR.submit_return_pr(id)
+
+@app.route('/pr/<id>', methods=['GET'])
+@limiter.limit("10 per minute")
+def get_return_pr(id):
+    return PRR.get_return_pr(id)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

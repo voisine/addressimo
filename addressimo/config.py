@@ -29,6 +29,7 @@ config.plugin_directories = [
 
 # Redis Setup
 config.redis_id_obj_uri = 'redis://localhost:6379/1'
+config.redis_prr_queue = 'redis://localhost:6379/2'
 config.redis_address_branch_uri = 'redis://localhost:6379/13'
 config.redis_addr_cache_uri = 'redis://localhost:6379/14'
 config.redis_ratelimit_uri = 'redis://localhost:6379/15'

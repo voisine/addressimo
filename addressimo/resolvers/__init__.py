@@ -1,5 +1,7 @@
 __author__ = 'mdavid'
 
+from datetime import datetime
+
 from flask import request, Response
 from redis import Redis
 
@@ -36,6 +38,10 @@ def resolve(id):
     if not id_obj:
         log.error('Unable to retrieve id_obj [ID: %s]' % id)
         return create_json_response(False, 'Unable to retrieve id_obj from database', 404)
+
+    # Handle PRRs
+    if id_obj.prr_only:
+        return create_json_response(False, 'Endpoint Requires a valid POST to create a PaymentRequest Request', 405, headers={'Allow': 'POST'})
 
     #################################################################################
     # Determine Wallet Address to Return or Use in BIP70 PaymentRequest Generation

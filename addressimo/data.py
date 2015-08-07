@@ -17,6 +17,7 @@ from attrdict import AttrDict
 # private_key_id
 # x509_cert
 # x509_cert_source
+# prr_only
 
 class IdObject(AttrDict):
 
@@ -29,6 +30,7 @@ class IdObject(AttrDict):
         self.bip32_enabled = False
         self.bip70_static_amount = None
         self.bip70_enabled = False
+        self.prr_only = False
         self.wallet_address = None
         self.expires = None
         self.memo = None

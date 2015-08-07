@@ -25,6 +25,23 @@ class BaseResolver(BasePlugin):
     def delete(self, id_obj):
         raise NotImplementedError
 
+    # PaymentRequest Request (PRR) Data Handling
+    def add_prr(self, id, prr_data):
+        raise NotImplementedError
+
+    def get_prrs(self, id):
+        raise NotImplementedError
+
+    def delete_prr(self, id, prr_id):
+        raise NotImplementedError
+
+    # Return PaymentRequest (RPR) Data Handling
+    def add_return_pr(self, id, return_pr):
+        raise NotImplementedError
+
+    def get_return_pr(self, id):
+        raise NotImplementedError
+
     @classmethod
     def get_plugin_category(cls):
         return 'RESOLVER'

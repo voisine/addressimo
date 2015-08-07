@@ -16,7 +16,11 @@ from urlparse import urlparse
 
 from addressimo.config import config
 
-def create_json_response(success=True, message='', status=200, data={}):
+PAYMENT_REQUEST_SIZE_MAX = 50000
+PAYMENT_SIZE_MAX = 50000
+PAYMENT_ACK_SIZE_MAX = 60000
+
+def create_json_response(success=True, message='', status=200, data={}, headers={}):
 
     allowed_origins = [config.site_url, 'localhost', '127.0.0.1']
 
@@ -52,6 +56,11 @@ def create_json_response(success=True, message='', status=200, data={}):
     for key in data.keys():
         if key not in ['success', 'message']:
             rdict[key] = data[key]
+
+    if headers:
+        temp_dict = default_headers.copy()
+        temp_dict.update(headers)
+        default_headers = temp_dict
 
     # Certain response codes don't contain data
     if status in [204]:

@@ -111,3 +111,74 @@ class RedisResolver(BaseResolver):
             log.info('Unable to Delete IdObject to Redis [ID: %s]: %s' % (id_obj.id, str(e)))
             raise
 
+
+    # PaymentRequest Request (PRR) Data Handling
+    def add_prr(self, id, prr_data):
+
+        redis_client = Redis.from_url(config.redis_prr_queue)
+
+        if 'id' not in prr_data:
+            while True:
+                prr_data['id'] =  "%s%s%s" % (uuid4().hex, uuid4().hex, uuid4().hex)
+                try:
+                    if not redis_client.exists(prr_data['id']):
+                        break
+                except:
+                    log.warn("Unable to Validate New ID for PRR")
+                    raise
+
+        try:
+            result = redis_client.hset(id, prr_data['id'], json.dumps(prr_data))
+            if result != 1:
+                return None
+
+            log.info('Added PRR to Queue %s' % id)
+            return prr_data
+        except Exception as e:
+            log.info('Unable to Add PRR to Queue %s: %s' % (id, str(e)))
+            raise
+
+    def get_prrs(self, id):
+
+        redis_client = Redis.from_url(config.redis_prr_queue)
+
+        try:
+            result = redis_client.hgetall(id)
+            return [json.loads(x) for x in result.values()]
+        except Exception as e:
+            log.info('Unable to Get PRRs from Queue %s: %s' % (id, str(e)))
+            raise
+
+    def delete_prr(self, id, prr_id):
+
+        redis_client = Redis.from_url(config.redis_prr_queue)
+
+        try:
+            result = redis_client.hdel(id, prr_id)
+            return True if result > 0 else False
+        except Exception as e:
+            log.info('Unable to Delete PRR from Queue %s: %s' % (id, str(e)))
+            raise
+
+    # Return PaymentRequest (RPR) Data Handling
+    def add_return_pr(self, id, return_pr):
+
+        redis_client = Redis.from_url(config.redis_prr_queue)
+
+        try:
+            result = redis_client.set(return_pr['id'], json.dumps(return_pr))
+            if result != 1:
+                raise Exception('Redis Set Command Failed')
+        except Exception as e:
+            log.info('Unable to Add Return PR %s: %s' % (return_pr['id'], str(e)))
+            raise
+
+    def get_return_pr(self, id):
+
+        redis_client = Redis.from_url(config.redis_prr_queue)
+
+        try:
+            return json.loads(redis_client.get(id))
+        except Exception as e:
+            log.info('Unable to Get Return PR %s: %s' % (id, str(e)))
+            raise

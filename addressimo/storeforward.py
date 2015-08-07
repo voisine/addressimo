@@ -4,14 +4,12 @@ from addressimo.config import config
 from addressimo.data import IdObject
 from addressimo.paymentrequest.paymentrequest_pb2 import PaymentRequest, PaymentDetails
 from addressimo.plugin import PluginManager
-from addressimo.util import LogUtil, create_json_response, get_id, requires_valid_signature
+from addressimo.util import LogUtil, create_json_response, get_id, requires_valid_signature, PAYMENT_REQUEST_SIZE_MAX
 
 from flask import request
 from functools import wraps
 
 log = LogUtil.setup_logging()
-
-PAYMENT_REQUEST_SIZE_MAX = 50000
 
 def requires_public_key(f):
 

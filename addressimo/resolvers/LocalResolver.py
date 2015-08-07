@@ -8,7 +8,31 @@ from uuid import uuid4
 
 log = LogUtil.setup_logging()
 
+
 class LocalResolver(BaseResolver):
+    local_prr = {
+        "id": "b17330349ca44abb9c086e81987045b6",
+        "requester_pubkey": "a5fcadc9b7444f46ae5e4457746e6f2d8a27ded3714944a4a4d0746ffae8b913e688016d35e84c2e9540fec92c2a519e",
+        "amount": 0,
+        "notification_url": "https://notify.me/endpoint/Uuid",
+        "x509_cert": "--- OPTIONAL x509 Cert ---",
+        "sig": "hex encoded x509 signature - REQUIRED if x509_cert is present"
+    }
+
+    local_return_pr = {
+        "requester_pubkey": "a5fcadc9b7444f46ae5e4457746e6f2d8a27ded3714944a4a4d0746ffae8b913e688016d35e84c2e9540fec92c2a519e",
+        "pr": """SXQgd2FzIHRoZSBiZXN0IG9mIHRpbWVzLA0KaXQgd2FzIHRoZSB3b3JzdCBvZiB0aW1lcywNCml0
+IHdhcyB0aGUgYWdlIG9mIHdpc2RvbSwNCml0IHdhcyB0aGUgYWdlIG9mIGZvb2xpc2huZXNzLA0K
+aXQgd2FzIHRoZSBlcG9jaCBvZiBiZWxpZWYsDQppdCB3YXMgdGhlIGVwb2NoIG9mIGluY3JlZHVs
+aXR5LA0KaXQgd2FzIHRoZSBzZWFzb24gb2YgTGlnaHQsDQppdCB3YXMgdGhlIHNlYXNvbiBvZiBE
+YXJrbmVzcywNCml0IHdhcyB0aGUgc3ByaW5nIG9mIGhvcGUsDQppdCB3YXMgdGhlIHdpbnRlciBv
+ZiBkZXNwYWlyLA0Kd2UgaGFkIGV2ZXJ5dGhpbmcgYmVmb3JlIHVzLCB3ZSBoYWQgbm90aGluZyBi
+ZWZvcmUgdXMsIHdlIHdlcmUgYWxsIGdvaW5nIGRpcmVjdCB0byBIZWF2ZW4sIHdlIHdlcmUgYWxs
+IGdvaW5nIGRpcmVjdCB0aGUgb3RoZXIgd2F5lyBpbiBzaG9ydCwgdGhlIHBlcmlvZCB3YXMgc28g
+ZmFyIGxpa2UgdGhlIHByZXNlbnQgcGVyaW9kLCB0aGF0IHNvbWUgb2YgaXRzIG5vaXNpZXN0IGF1
+dGhvcml0aWVzIGluc2lzdGVkIG9uIGl0cyBiZWluZyByZWNlaXZlZCwgZm9yIGdvb2Qgb3IgZm9y
+IGV2aWwsIGluIHRoZSBzdXBlcmxhdGl2ZSBkZWdyZWUgb2YgY29tcGFyaXNvbiBvbmx5Lg=="""
+    }
 
     obj_config = {
         '1234567890abcdef': {
@@ -16,6 +40,7 @@ class LocalResolver(BaseResolver):
             'bip32_enabled': True,
             'master_public_key': 'xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8',
             'bip70_enabled': True,
+            'prr_only': False,
             'bip70_static_amount': 424242,
             'private_key_location': 'HSM1',
             'private_key_id': 'privKey1234',
@@ -86,6 +111,23 @@ rFhAxdbeHjwhElfusbIPLl8jNikPKYIjynm3P+4oTU8jzSqF6FiOTA==
 
     def delete(self, id_obj):
         log.info('Delete called on LocalResolver [ID: %d]' % id_obj.id)
+
+    # PaymentRequest Request (PRR) Data Handling
+    def add_prr(self, id, prr_data):
+        return
+
+    def get_prrs(self, id):
+        return [self.local_prr]
+
+    def delete_prr(self, id, prr_id):
+        return
+
+    # Return PaymentRequest (RPR) Data Handling
+    def add_return_pr(self, id, return_pr):
+        return
+
+    def get_return_pr(self, id):
+        return self.local_return_pr
 
     @classmethod
     def get_plugin_name(cls):
