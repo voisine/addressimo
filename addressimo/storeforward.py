@@ -26,7 +26,7 @@ def requires_public_key(f):
             return create_json_response(False, 'Missing x-identity header', 400)
 
         resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
-        id_obj = resolver.get_config(id)
+        id_obj = resolver.get_id_obj(id)
         if not id_obj:
             log.info('No Data Exists for Given ID, Failing [ID: %s]' % id)
             return create_json_response(False, 'ID Not Recognized', 404)
@@ -58,12 +58,17 @@ class StoreForward:
     def add():
 
         resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
-        id_obj = resolver.get_config(get_id())
+        id_obj = resolver.get_id_obj(get_id())
         if not id_obj:
             return create_json_response(False, 'Invalid Identifier', 404)
 
-        # TODO: Put this in a try block
-        rdata = request.get_json()
+        rdata = None
+        try:
+            rdata = request.get_json()
+        except Exception as e:
+            log.warn("Exception Parsing JSON: %s" % str(e))
+            return create_json_response(False, 'Invalid Request', 400)
+
         if not rdata:
             return create_json_response(False, 'Invalid Request', 400)
 
@@ -124,7 +129,7 @@ class StoreForward:
     def delete():
 
         resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
-        id_obj = resolver.get_config(get_id())
+        id_obj = resolver.get_id_obj(get_id())
         if not id_obj:
             return create_json_response(False, 'Invalid Identifier', 404)
 
@@ -137,7 +142,7 @@ class StoreForward:
     def get_count():
 
         resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
-        id_obj = resolver.get_config(get_id())
+        id_obj = resolver.get_id_obj(get_id())
         if not id_obj:
             return create_json_response(False, 'Invalid Identifier', 404)
 

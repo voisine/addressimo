@@ -4,7 +4,7 @@ from addressimo.plugin import BasePlugin
 
 class BaseResolver(BasePlugin):
 
-    def get_config(self, id):
+    def get_id_obj(self, id):
         raise NotImplementedError
 
     def get_all_keys(self):
@@ -36,7 +36,7 @@ class BaseResolver(BasePlugin):
         raise NotImplementedError
 
     # Return PaymentRequest (RPR) Data Handling
-    def add_return_pr(self, id, return_pr):
+    def add_return_pr(self, return_pr):
         raise NotImplementedError
 
     def get_return_pr(self, id):

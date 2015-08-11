@@ -3,6 +3,8 @@ __author__ = 'Matt David'
 from collections import defaultdict
 from datetime import datetime
 from flask import request
+from OpenSSL import crypto
+
 from addressimo.config import config
 from addressimo.plugin import PluginManager
 from addressimo.storeforward import requires_public_key
@@ -12,10 +14,8 @@ log = LogUtil.setup_logging()
 
 class PRR:
 
-    # TODO: Update requires_valid_signature decorator with a parameter to not require an identity/sig combo to have a
-    # value S&F endpoint configured
-
     @staticmethod
+    @requires_valid_signature
     def submit_prr(id):
 
         resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
@@ -49,10 +49,23 @@ class PRR:
             'submit_date': datetime.utcnow()
         }
 
-        if prr_data['x509_cert'] and not prr_data['signature']:
+        if prr_data.get('x509_cert') and not prr_data.get('signature'):
             return create_json_response(False, 'Requests including x509 cert must include signature', 400)
 
-        # TODO: Validate Signature
+        # Verify signature if cert and signature are present
+        if prr_data.get('x509_cert') and prr_data.get('signature'):
+
+            try:
+                cert = crypto.load_certificate(crypto.FILETYPE_PEM, prr_data.get('x509_cert'))
+            except Exception as e:
+                log.warn('Unable to load given x509 certificate [ID: %s]: %s' % (id, str(e)))
+                return create_json_response(False, 'Invalid x509 Certificate', 400)
+
+            try:
+                crypto.verify(cert, rdata.get('signature'), request.url + request.data, 'sha1')
+            except Exception as e:
+                log.info('Bad Signature Encountered During Signature Validation [ID: %s]: %s' % (id, str(e)))
+                return create_json_response(False, 'Signature Verification Error', 401)
 
         try:
             ret_prr_data = resolver.add_prr(id, prr_data)
@@ -72,7 +85,7 @@ class PRR:
     def get_queued_pr_requests(id):
 
         resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
-        id_obj = resolver.get_config(get_id())
+        id_obj = resolver.get_id_obj(get_id())
         if not id_obj:
             return create_json_response(False, 'Invalid Identifier', 404)
 
@@ -81,7 +94,7 @@ class PRR:
             return create_json_response(data={"count":len(queued_prrs), "requests": queued_prrs})
         except Exception as e:
             log.error('Unable to Retrieve Queued PR Requests [ID: %s]: %s' % (id, str(e)))
-            return create_json_response(False, 'Unable to Retrieve Queued PR Requests', status=500)
+            return create_json_response(False, 'Unable to Retrieve Queued PR Requests', 500)
 
     @staticmethod
     @requires_public_key
@@ -89,9 +102,13 @@ class PRR:
     def submit_return_pr(id):
 
         resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
-        id_obj = resolver.get_config(get_id())
+        id_obj = resolver.get_id_obj(get_id())
         if not id_obj:
             return create_json_response(False, 'Invalid Identifier', 404)
+
+        if not id_obj.prr_only:
+            log.warn("PaymentRequest Request Endpoint POST Submitted to Non-PRR Endpoint")
+            return create_json_response(False, 'Invalid PaymentRequest Request Endpoint', 400)
 
         rdata = request.get_json()
         if not rdata:
@@ -100,7 +117,7 @@ class PRR:
         ready_request_list = rdata.get('ready_requests')
         if not ready_request_list or not isinstance(ready_request_list, list):
             log.warn('Submitted Response Has Invalid ready_requests list')
-            return create_json_response(False, 'Missing or Empty ready_requests list')
+            return create_json_response(False, 'Missing or Empty ready_requests list', 400)
 
         failures = defaultdict(list)
         for ready_request in ready_request_list:

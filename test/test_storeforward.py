@@ -31,7 +31,7 @@ class TestRequiresPublicKey(AddressimoTestCase):
         self.mockIdObj = Mock()
         self.mockIdObj.auth_public_key = TEST_PUBKEY
 
-        self.mockPluginManager.get_plugin.return_value.get_config.return_value = self.mockIdObj
+        self.mockPluginManager.get_plugin.return_value.get_id_obj.return_value = self.mockIdObj
 
         # Mock the decorator function -> We run self.decorated
         self.mock_func = MagicMock(return_value='fake_response')
@@ -45,8 +45,8 @@ class TestRequiresPublicKey(AddressimoTestCase):
         self.assertEqual(1, self.mockGetId.call_count)
         self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args[0][0])
-        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
-        self.assertEqual(self.mockGetId.return_value, self.mockPluginManager.get_plugin.return_value.get_config.call_args[0][0])
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
+        self.assertEqual(self.mockGetId.return_value, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_args[0][0])
         self.assertEqual(1, self.mock_func.call_count)
         self.assertFalse(self.mockCreateJsonResponse.called)
 
@@ -58,7 +58,7 @@ class TestRequiresPublicKey(AddressimoTestCase):
 
         self.assertEqual(1, self.mockGetId.call_count)
         self.assertEqual(0, self.mockPluginManager.get_plugin.call_count)
-        self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(0, self.mock_func.call_count)
         self.assertEqual(1, self.mockCreateJsonResponse.call_count)
         self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
@@ -73,7 +73,7 @@ class TestRequiresPublicKey(AddressimoTestCase):
 
         self.assertEqual(1, self.mockGetId.call_count)
         self.assertEqual(0, self.mockPluginManager.get_plugin.call_count)
-        self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(0, self.mock_func.call_count)
         self.assertEqual(1, self.mockCreateJsonResponse.call_count)
         self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
@@ -82,15 +82,15 @@ class TestRequiresPublicKey(AddressimoTestCase):
 
     def test_no_id_obj(self):
 
-        self.mockPluginManager.get_plugin.return_value.get_config.return_value = None
+        self.mockPluginManager.get_plugin.return_value.get_id_obj.return_value = None
 
         ret_val = self.decorated()
 
         self.assertEqual(1, self.mockGetId.call_count)
         self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args[0][0])
-        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
-        self.assertEqual(self.mockGetId.return_value, self.mockPluginManager.get_plugin.return_value.get_config.call_args[0][0])
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
+        self.assertEqual(self.mockGetId.return_value, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_args[0][0])
         self.assertEqual(0, self.mock_func.call_count)
         self.assertEqual(1, self.mockCreateJsonResponse.call_count)
         self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
@@ -106,8 +106,8 @@ class TestRequiresPublicKey(AddressimoTestCase):
         self.assertEqual(1, self.mockGetId.call_count)
         self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args[0][0])
-        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
-        self.assertEqual(self.mockGetId.return_value, self.mockPluginManager.get_plugin.return_value.get_config.call_args[0][0])
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
+        self.assertEqual(self.mockGetId.return_value, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_args[0][0])
         self.assertEqual(0, self.mock_func.call_count)
         self.assertEqual(1, self.mockCreateJsonResponse.call_count)
         self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
@@ -204,7 +204,7 @@ class TestAdd(AddressimoTestCase):
         self.mockIdObj = Mock()
         self.mockIdObj.auth_public_key = TEST_PUBKEY
         self.mockIdObj.presigned_payment_requests = []
-        self.mockPluginManager.get_plugin.return_value.get_config.return_value = self.mockIdObj
+        self.mockPluginManager.get_plugin.return_value.get_id_obj.return_value = self.mockIdObj
 
     def test_go_right(self):
 
@@ -212,7 +212,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(1, self.mockPaymentRequest.call_count)
@@ -231,13 +231,13 @@ class TestAdd(AddressimoTestCase):
 
     def test_no_id(self):
 
-        self.mockResolver.get_config.side_effect = [self.mockIdObj, None]
+        self.mockResolver.get_id_obj.side_effect = [self.mockIdObj, None]
 
         StoreForward.add()
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(0, self.mockRequest.get_json.call_count)
 
         self.assertEqual(0, len(self.mockIdObj.presigned_payment_requests))
@@ -249,6 +249,26 @@ class TestAdd(AddressimoTestCase):
         self.assertEqual('Invalid Identifier', self.mockCreateJsonResponse.call_args[0][1])
         self.assertEqual(404, self.mockCreateJsonResponse.call_args[0][2])
 
+    def test_get_json_exception(self):
+
+        self.mockRequest.get_json.side_effect = Exception()
+
+        StoreForward.add()
+
+        self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
+        self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
+        self.assertEqual(1, self.mockRequest.get_json.call_count)
+
+        self.assertEqual(0, len(self.mockIdObj.presigned_payment_requests))
+        self.assertEqual(0, self.mockResolver.save.call_count)
+
+        self.assertEqual(0, self.mockPaymentRequest.call_count)
+        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
+        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
+        self.assertEqual('Invalid Request', self.mockCreateJsonResponse.call_args[0][1])
+        self.assertEqual(400, self.mockCreateJsonResponse.call_args[0][2])
+
     def test_no_json(self):
 
         self.mockRequest.get_json.return_value = None
@@ -257,7 +277,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(0, len(self.mockIdObj.presigned_payment_requests))
@@ -277,7 +297,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(0, len(self.mockIdObj.presigned_payment_requests))
@@ -297,7 +317,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(0, len(self.mockIdObj.presigned_payment_requests))
@@ -317,7 +337,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(0, len(self.mockIdObj.presigned_payment_requests))
@@ -341,7 +361,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(0, len(self.mockIdObj.presigned_payment_requests))
@@ -361,7 +381,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(1, self.mockPaymentRequest.call_count)
@@ -385,7 +405,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(1, self.mockPaymentRequest.call_count)
@@ -420,7 +440,7 @@ class TestAdd(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_config.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
         self.assertEqual(1, self.mockRequest.get_json.call_count)
 
         self.assertEqual(4, self.mockPaymentRequest.call_count)
@@ -489,7 +509,7 @@ class TestDelete(AddressimoTestCase):
         self.mockIdObj = Mock()
         self.mockIdObj.auth_public_key = TEST_PUBKEY
         self.mockIdObj.presigned_payment_requests = []
-        self.mockPluginManager.get_plugin.return_value.get_config.return_value = self.mockIdObj
+        self.mockPluginManager.get_plugin.return_value.get_id_obj.return_value = self.mockIdObj
 
     def test_go_right(self):
 
@@ -497,7 +517,7 @@ class TestDelete(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockResolver.get_config.call_count)
+        self.assertEqual(2, self.mockResolver.get_id_obj.call_count)
         self.assertEqual(1, self.mockGetId.call_count)
         self.assertEqual(1, self.mockResolver.delete.call_count)
         self.assertEqual(self.mockIdObj, self.mockResolver.delete.call_args[0][0])
@@ -506,13 +526,13 @@ class TestDelete(AddressimoTestCase):
 
     def test_no_id_obj(self):
 
-        self.mockResolver.get_config.side_effect = [self.mockIdObj, None]
+        self.mockResolver.get_id_obj.side_effect = [self.mockIdObj, None]
 
         StoreForward.delete()
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockResolver.get_config.call_count)
+        self.assertEqual(2, self.mockResolver.get_id_obj.call_count)
         self.assertEqual(1, self.mockGetId.call_count)
         self.assertEqual(0, self.mockResolver.delete.call_count)
 
@@ -566,7 +586,7 @@ class TestGetCount(AddressimoTestCase):
         self.mockIdObj = Mock()
         self.mockIdObj.auth_public_key = TEST_PUBKEY
         self.mockIdObj.presigned_payment_requests = ['pr1', 'pr2']
-        self.mockPluginManager.get_plugin.return_value.get_config.return_value = self.mockIdObj
+        self.mockPluginManager.get_plugin.return_value.get_id_obj.return_value = self.mockIdObj
 
     def test_go_right(self):
 
@@ -574,20 +594,20 @@ class TestGetCount(AddressimoTestCase):
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockResolver.get_config.call_count)
+        self.assertEqual(2, self.mockResolver.get_id_obj.call_count)
         self.assertEqual(1, self.mockGetId.call_count)
         self.assertEqual(1, self.mockCreateJsonResponse.call_count)
         self.assertEqual({'payment_request_count': 2}, self.mockCreateJsonResponse.call_args[1]['data'])
 
     def test_no_id_obj(self):
 
-        self.mockResolver.get_config.side_effect = [self.mockIdObj, None]
+        self.mockResolver.get_id_obj.side_effect = [self.mockIdObj, None]
 
         StoreForward.get_count()
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('RESOLVER', self.mockPluginManager.get_plugin.call_args_list[1][0][0])
-        self.assertEqual(2, self.mockResolver.get_config.call_count)
+        self.assertEqual(2, self.mockResolver.get_id_obj.call_count)
         self.assertEqual(1, self.mockGetId.call_count)
 
         self.assertEqual(1, self.mockCreateJsonResponse.call_count)

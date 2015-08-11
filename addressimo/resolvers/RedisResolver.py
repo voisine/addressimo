@@ -161,7 +161,7 @@ class RedisResolver(BaseResolver):
             raise
 
     # Return PaymentRequest (RPR) Data Handling
-    def add_return_pr(self, id, return_pr):
+    def add_return_pr(self, return_pr):
 
         redis_client = Redis.from_url(config.redis_prr_queue)
 

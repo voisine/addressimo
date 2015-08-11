@@ -38,6 +38,7 @@ class TestResolve(AddressimoTestCase):
         self.mock_id_obj = Mock()
         self.mock_id_obj.presigned_payment_requests = []
         self.mock_id_obj.presigned_only = False
+        self.mock_id_obj.prr_only = False
         self.mockPluginManager.get_plugin.return_value.get_id_obj.return_value = self.mock_id_obj
 
         self.mockGetBip70Amount.return_value = 0
@@ -355,6 +356,30 @@ class TestResolve(AddressimoTestCase):
         self.assertFalse(call_args[0])
         self.assertEqual('Unable to retrieve id_obj from database', call_args[1])
         self.assertEqual(404, call_args[2])
+
+    def test_id_endpoint_prr_only(self):
+
+        # Setup test case
+        self.mock_id_obj.prr_only = True
+
+        resolve('id')
+
+        # Validate all calls
+        self.assertEqual(1, self.mockCacheUpToDate.call_count)
+        self.assertEqual(1, self.mockCreateJSONResponse.call_count)
+        self.assertEqual(0, self.mockResponse.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_id_obj.call_count)
+        self.assertEqual(0, self.mockGetUnusedPresignedPR.call_count)
+        self.assertEqual(0, self.mockGetUnusedBip32Addr.call_count)
+        self.assertEqual(0, self.mockCreatePRResponse.call_count)
+        self.assertEqual(0, self.mockCreateWalletAddrResponse.call_count)
+
+        # Validate JSON response
+        call_args = self.mockCreateJSONResponse.call_args[0]
+        self.assertFalse(call_args[0])
+        self.assertEqual('Endpoint Requires a valid POST to create a PaymentRequest Request', call_args[1])
+        self.assertEqual(405, call_args[2])
+        self.assertEqual({'Allow':'POST'}, self.mockCreateJSONResponse.call_args[1]['headers'])
 
     def test_presigned_payment_requests_all_invalid(self):
 

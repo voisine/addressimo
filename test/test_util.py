@@ -38,7 +38,7 @@ class Test_create_json_response(AddressimoTestCase):
     def test_goright(self):
 
         # Run create_json_response
-        ret_val = create_json_response(success=True, message='test message', data={'key':'value'})
+        ret_val = create_json_response(success=True, message='test message', data={'key':'value'}, headers={"X-Random":"w00t"})
 
         # Verify Response Data
         respdata = self.mockResponse.call_args[0]
@@ -51,6 +51,7 @@ class Test_create_json_response(AddressimoTestCase):
         self.assertEqual('X-Requested-With, accept, content-type', respargs['headers']['Access-Control-Allow-Headers'])
         self.assertEqual('PUT, POST, OPTIONS', respargs['headers']['Access-Control-Allow-Methods'])
         self.assertEqual('http://127.0.0.1', respargs['headers']['Access-Control-Allow-Origin'])
+        self.assertEqual('w00t', respargs['headers']['X-Random'])
 
     def test_no_matching_methods(self):
 

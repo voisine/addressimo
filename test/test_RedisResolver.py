@@ -304,3 +304,278 @@ class TestDelete(AddressimoTestCase):
         self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
         call_args = self.mockRedis.from_url.return_value.delete.call_args[0]
         self.assertEqual(self.mock_id_obj.id, call_args[0])
+
+class TestAddPRR(AddressimoTestCase):
+
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+        self.patcher2 = patch('addressimo.resolvers.RedisResolver.uuid4')
+
+        self.mockRedis = self.patcher1.start()
+        self.mockUuid4 = self.patcher2.start()
+
+        self.mockRedis.from_url.return_value.exists.return_value = False
+        self.mockRedis.from_url.return_value.hset.return_value = 1
+        self.mockUuid4.return_value.hex = 'uuid4'
+
+        self.submit_id = 'endpoint_id'
+        self.prr_data = {'key':'value'}
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        result = self.rr.add_prr(self.submit_id, self.prr_data)
+
+        self.assertIsNotNone(result)
+        self.assertEqual('uuid4uuid4uuid4', result.get('id'))
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(3, self.mockUuid4.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.exists.call_count)
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.exists.call_args[0][0])
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hset.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hset.call_args[0][0])
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.hset.call_args[0][1])
+        self.assertEqual('{"id": "uuid4uuid4uuid4", "key": "value"}', self.mockRedis.from_url.return_value.hset.call_args[0][2])
+
+    def test_ppr_id_exists_once(self):
+
+        self.mockRedis.from_url.return_value.exists.side_effect = [True, False]
+
+        result = self.rr.add_prr(self.submit_id, self.prr_data)
+
+        self.assertIsNotNone(result)
+        self.assertEqual('uuid4uuid4uuid4', result.get('id'))
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(6, self.mockUuid4.call_count)
+        self.assertEqual(2, self.mockRedis.from_url.return_value.exists.call_count)
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.exists.call_args[0][0])
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hset.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hset.call_args[0][0])
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.hset.call_args[0][1])
+        self.assertEqual('{"id": "uuid4uuid4uuid4", "key": "value"}', self.mockRedis.from_url.return_value.hset.call_args[0][2])
+
+    def test_exists_exception(self):
+
+        self.mockRedis.from_url.return_value.exists.side_effect = Exception()
+
+        self.assertRaises(Exception, self.rr.add_prr, self.submit_id, self.prr_data)
+
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(3, self.mockUuid4.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.exists.call_count)
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.exists.call_args[0][0])
+        self.assertEqual(0, self.mockRedis.from_url.return_value.hset.call_count)
+
+    def test_hset_returns_not_one(self):
+
+        self.mockRedis.from_url.return_value.hset.return_value = 0
+
+        result = self.rr.add_prr(self.submit_id, self.prr_data)
+
+        self.assertIsNone(result)
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(3, self.mockUuid4.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.exists.call_count)
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.exists.call_args[0][0])
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hset.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hset.call_args[0][0])
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.hset.call_args[0][1])
+        self.assertEqual('{"id": "uuid4uuid4uuid4", "key": "value"}', self.mockRedis.from_url.return_value.hset.call_args[0][2])
+
+    def test_hset_exception(self):
+
+        self.mockRedis.from_url.return_value.hset.side_effect = Exception()
+
+        self.assertRaises(Exception, self.rr.add_prr, self.submit_id, self.prr_data)
+
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(3, self.mockUuid4.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.exists.call_count)
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.exists.call_args[0][0])
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hset.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hset.call_args[0][0])
+        self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.hset.call_args[0][1])
+        self.assertEqual('{"id": "uuid4uuid4uuid4", "key": "value"}', self.mockRedis.from_url.return_value.hset.call_args[0][2])
+
+class TestGetPRRs(AddressimoTestCase):
+
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        self.mockRedis.from_url.return_value.hgetall.return_value = {
+            "key1": json.dumps({"key1":"value1"}),
+            "key2": json.dumps({"key2":"value2"})
+        }
+
+        self.submit_id = 'endpoint_id'
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        result = self.rr.get_prrs(self.submit_id)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(2, len(result))
+        self.assertIn("key2", result[0])
+        self.assertIn("key1", result[1])
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
+
+    def test_go_no_values(self):
+
+        self.mockRedis.from_url.return_value.hgetall.return_value = {}
+
+        result = self.rr.get_prrs(self.submit_id)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(0, len(result))
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
+
+    def test_redis_exception(self):
+
+        self.mockRedis.from_url.return_value.hgetall.side_effect = Exception
+
+        self.assertRaises(Exception, self.rr.get_prrs, self.submit_id)
+
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
+
+class TestDeletePRR(AddressimoTestCase):
+
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        self.mockRedis.from_url.return_value.hdel.return_value = 1
+        self.submit_id = 'endpoint_id'
+        self.prr_id = 'prr_id'
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        result = self.rr.delete_prr(self.submit_id, self.prr_id)
+
+        self.assertTrue(result)
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hdel.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hdel.call_args[0][0])
+        self.assertEqual(self.prr_id, self.mockRedis.from_url.return_value.hdel.call_args[0][1])
+
+    def test_no_delete(self):
+
+        self.mockRedis.from_url.return_value.hdel.return_value = 0
+
+        result = self.rr.delete_prr(self.submit_id, self.prr_id)
+
+        self.assertFalse(result)
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hdel.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hdel.call_args[0][0])
+        self.assertEqual(self.prr_id, self.mockRedis.from_url.return_value.hdel.call_args[0][1])
+
+    def test_exception(self):
+
+        self.mockRedis.from_url.return_value.hdel.side_effect = Exception()
+
+        self.assertRaises(Exception, self.rr.delete_prr, self.submit_id, self.prr_id)
+
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hdel.call_count)
+        self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hdel.call_args[0][0])
+        self.assertEqual(self.prr_id, self.mockRedis.from_url.return_value.hdel.call_args[0][1])
+
+class TestAddReturnPR(AddressimoTestCase):
+
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        self.mockRedis.from_url.return_value.set.return_value = 1
+        self.return_pr = {"id":"rpr_id"}
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        result = self.rr.add_return_pr(self.return_pr)
+
+        self.assertIsNone(result)
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.set.call_count)
+        self.assertEqual('rpr_id', self.mockRedis.from_url.return_value.set.call_args[0][0])
+        self.assertEqual('{"id": "rpr_id"}', self.mockRedis.from_url.return_value.set.call_args[0][1])
+
+    def test_set_returns_non_one(self):
+
+        self.mockRedis.from_url.return_value.set.return_value = 0
+
+        self.assertRaises(Exception, self.rr.add_return_pr,self.return_pr)
+
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.set.call_count)
+        self.assertEqual('rpr_id', self.mockRedis.from_url.return_value.set.call_args[0][0])
+        self.assertEqual('{"id": "rpr_id"}', self.mockRedis.from_url.return_value.set.call_args[0][1])
+
+    def test_set_exception(self):
+
+        self.mockRedis.from_url.return_value.set.side_effect = Exception()
+
+        self.assertRaises(Exception, self.rr.add_return_pr,self.return_pr)
+
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.set.call_count)
+        self.assertEqual('rpr_id', self.mockRedis.from_url.return_value.set.call_args[0][0])
+        self.assertEqual('{"id": "rpr_id"}', self.mockRedis.from_url.return_value.set.call_args[0][1])
+
+class TestGetReturnPR(AddressimoTestCase):
+
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        self.mockRedis.from_url.return_value.get.return_value = json.dumps({"id":"rpr_id"})
+        self.rpr_id = 'rpr_id'
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        result = self.rr.get_return_pr(self.rpr_id)
+
+        self.assertIsNotNone(result)
+        self.assertIn('id', result)
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.get.call_count)
+        self.assertEqual('rpr_id', self.mockRedis.from_url.return_value.get.call_args[0][0])
+
+    def test_exception(self):
+
+        self.mockRedis.from_url.return_value.get.side_effect = Exception()
+
+        self.assertRaises(Exception, self.rr.get_return_pr, self.rpr_id)
+
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.get.call_count)
+        self.assertEqual('rpr_id', self.mockRedis.from_url.return_value.get.call_args[0][0])

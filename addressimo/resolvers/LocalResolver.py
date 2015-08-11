@@ -85,7 +85,7 @@ rFhAxdbeHjwhElfusbIPLl8jNikPKYIjynm3P+4oTU8jzSqF6FiOTA==
         }
     }
 
-    def get_config(self, id):
+    def get_id_obj(self, id):
         config = IdObject(id)
         val = self.obj_config.get(id)
         for key, value in val.items():
@@ -123,7 +123,7 @@ rFhAxdbeHjwhElfusbIPLl8jNikPKYIjynm3P+4oTU8jzSqF6FiOTA==
         return
 
     # Return PaymentRequest (RPR) Data Handling
-    def add_return_pr(self, id, return_pr):
+    def add_return_pr(self, return_pr):
         return
 
     def get_return_pr(self, id):
