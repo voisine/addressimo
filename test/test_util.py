@@ -157,7 +157,7 @@ class Test_create_bip72_response(AddressimoTestCase):
 
         self.mockWalletAddress = '1kjhdslkjghlsfdgkjhsdflgkhj'
         self.mockAmount = '75.4'
-        self.mockPaymentRequestURL = 'https://site_url/resolve/id?bip70=true&amount=75.4'
+        self.mockPaymentRequestURL = 'https://site_url/address/id/resolve?bip70=true&amount=75.4'
 
     def test_goright(self):
 
@@ -166,7 +166,7 @@ class Test_create_bip72_response(AddressimoTestCase):
 
         # Verify Response Data
         respdata = self.mockResponse.call_args[0]
-        self.assertEqual('bitcoin:1kjhdslkjghlsfdgkjhsdflgkhj?amount=75.4&r=https%3A%2F%2Fsite_url%2Fresolve%2Fid%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
+        self.assertEqual('bitcoin:1kjhdslkjghlsfdgkjhsdflgkhj?amount=75.4&r=https%3A%2F%2Fsite_url%2Faddress%2Fid%2Fresolve%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
 
         # Verify Response Arguments
         respargs = self.mockResponse.call_args[1]
@@ -186,7 +186,7 @@ class Test_create_bip72_response(AddressimoTestCase):
 
         # Verify Response Data
         respdata = self.mockResponse.call_args[0]
-        self.assertEqual('bitcoin:1kjhdslkjghlsfdgkjhsdflgkhj?amount=75.4&r=https%3A%2F%2Fsite_url%2Fresolve%2Fid%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
+        self.assertEqual('bitcoin:1kjhdslkjghlsfdgkjhsdflgkhj?amount=75.4&r=https%3A%2F%2Fsite_url%2Faddress%2Fid%2Fresolve%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
 
         # Verify Response Arguments
         respargs = self.mockResponse.call_args[1]
@@ -206,7 +206,7 @@ class Test_create_bip72_response(AddressimoTestCase):
 
         # Verify Response Data
         respdata = self.mockResponse.call_args[0]
-        self.assertEqual('bitcoin:1kjhdslkjghlsfdgkjhsdflgkhj?amount=75.4&r=https%3A%2F%2Fsite_url%2Fresolve%2Fid%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
+        self.assertEqual('bitcoin:1kjhdslkjghlsfdgkjhsdflgkhj?amount=75.4&r=https%3A%2F%2Fsite_url%2Faddress%2Fid%2Fresolve%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
 
         # Verify Response Arguments
         respargs = self.mockResponse.call_args[1]
@@ -223,7 +223,7 @@ class Test_create_bip72_response(AddressimoTestCase):
 
         # Verify Response Data
         respdata = self.mockResponse.call_args[0]
-        self.assertEqual('bitcoin:?amount=75.4&r=https%3A%2F%2Fsite_url%2Fresolve%2Fid%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
+        self.assertEqual('bitcoin:?amount=75.4&r=https%3A%2F%2Fsite_url%2Faddress%2Fid%2Fresolve%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
 
         # Verify Response Arguments
         respargs = self.mockResponse.call_args[1]
@@ -240,7 +240,7 @@ class Test_create_bip72_response(AddressimoTestCase):
 
         # Verify Response Data
         respdata = self.mockResponse.call_args[0]
-        self.assertEqual('bitcoin:1kjhdslkjghlsfdgkjhsdflgkhj?r=https%3A%2F%2Fsite_url%2Fresolve%2Fid%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
+        self.assertEqual('bitcoin:1kjhdslkjghlsfdgkjhsdflgkhj?r=https%3A%2F%2Fsite_url%2Faddress%2Fid%2Fresolve%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
 
         # Verify Response Arguments
         respargs = self.mockResponse.call_args[1]
@@ -274,7 +274,7 @@ class Test_create_bip72_response(AddressimoTestCase):
 
         # Verify Response Data
         respdata = self.mockResponse.call_args[0]
-        self.assertEqual('bitcoin:?r=https%3A%2F%2Fsite_url%2Fresolve%2Fid%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
+        self.assertEqual('bitcoin:?r=https%3A%2F%2Fsite_url%2Faddress%2Fid%2Fresolve%3Fbip70%3Dtrue%26amount%3D75.4', respdata[0])
 
         # Verify Response Arguments
         respargs = self.mockResponse.call_args[1]
@@ -291,7 +291,7 @@ class TestGetId(AddressimoTestCase):
 
         self.patcher1 = patch('addressimo.util.request')
         self.mockRequest = self.patcher1.start()
-        self.mockRequest.url = 'http://addressimo.com/sf/0123456789abcdef'
+        self.mockRequest.url = 'http://addressimo.com/address/0123456789abcdef/sf'
 
     def test_go_right(self):
 
@@ -300,9 +300,15 @@ class TestGetId(AddressimoTestCase):
 
     def test_no_id(self):
 
-        self.mockRequest.url = 'http://addressimo.com/random'
+        self.mockRequest.url = 'http://addressimo.com/sf'
         ret_val = get_id()
-        self.assertEqual('random', ret_val)
+        self.assertIsNone(ret_val)
+
+    def test_paymentrequest(self):
+
+        self.mockRequest.url = 'http://addressimo.com/paymentrequst/0123456789abcdef'
+        ret_val = get_id()
+        self.assertEqual('0123456789abcdef', ret_val)
 
 
 # NOTE: Since we're also verifying the functionality of the ECDSA library and args passed, we cannot
@@ -321,7 +327,7 @@ class TestRequiresValidSignature(AddressimoTestCase):
         self.mockRequest = self.patcher3.start()
         self.mockVerifyingKey = self.patcher4.start()
 
-        self.mockRequest.url = 'http://addressimo.com/sf/0123456789abcdef'
+        self.mockRequest.url = 'http://addressimo.com/address/0123456789abcdef/sf'
         self.mockRequest.data = 'this is some crazy random data, dude! you know you gotta love this!'
 
         from ecdsa.keys import SigningKey
@@ -361,12 +367,11 @@ class TestRequiresValidSignature(AddressimoTestCase):
         self.decorated()
 
         self.assertEqual(1, self.mockGetId.call_count)
-        self.assertEqual(0, self.mockVerifyingKey.from_string.call_count)
-        self.assertEqual(0, self.mock_func.call_count)
-        self.assertEqual(1, self.mockCreateJsonResponse.call_count)
-        self.assertFalse(self.mockCreateJsonResponse.call_args[0][0])
-        self.assertEqual('Unknown Endpoint', self.mockCreateJsonResponse.call_args[0][1])
-        self.assertEqual(404, self.mockCreateJsonResponse.call_args[0][2])
+        self.assertEqual(1, self.mockVerifyingKey.from_string.call_count)
+        self.assertEqual(TEST_PUBKEY.decode('hex'), self.mockVerifyingKey.from_string.call_args[0][0])
+        self.assertEqual(curves.SECP256k1, self.mockVerifyingKey.from_string.call_args[1]['curve'])
+        self.assertEqual(1, self.mock_func.call_count)
+        self.assertEqual(0, self.mockCreateJsonResponse.call_count)
 
     def test_missing_sig(self):
 

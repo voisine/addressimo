@@ -94,7 +94,7 @@ class TestSubmitPrr(AddressimoTestCase):
         self.assertEqual(1, self.mockCreateJsonResponse.call_count)
         self.assertEqual(202, self.mockCreateJsonResponse.call_args[1]['status'])
         self.assertIn('Location', self.mockCreateJsonResponse.call_args[1]['headers'])
-        self.assertEqual('https://%s/pr/prr_id' % config.site_url, self.mockCreateJsonResponse.call_args[1]['headers']['Location'])
+        self.assertEqual('https://%s/paymentrequest/prr_id' % config.site_url, self.mockCreateJsonResponse.call_args[1]['headers']['Location'])
 
     def test_id_obj_resolve_exception(self):
 

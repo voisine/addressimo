@@ -73,7 +73,7 @@ class PRR:
                 log.error("Unexpected Add PRR Failure [ID: %s]" % (id))
                 return create_json_response(False, 'Unknown System Error, Please Try Again Later', 500)
 
-            rpr_url = 'https://%s/pr/%s' % (config.site_url, ret_prr_data['id'])
+            rpr_url = 'https://%s/paymentrequest/%s' % (config.site_url, ret_prr_data['id'])
             return create_json_response(status=202, headers={'Location':rpr_url})
         except Exception as e:
             log.error("Unexpected exception adding PRR [ID: %s]: %s" % (id, str(e)))

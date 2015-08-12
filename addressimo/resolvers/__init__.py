@@ -106,11 +106,11 @@ def resolve(id):
             valid_pr = get_unused_presigned_payment_request(id_obj)
             if not valid_pr:
                 return create_json_response(False, 'No PaymentRequests available for this ID', 404)
-            return create_bip72_response(None, None, 'https://%s/resolve/%s?bip70=true' % (config.site_url, id))
+            return create_bip72_response(None, None, 'https://%s/address/%s/resolve?bip70=true' % (config.site_url, id))
 
         # Handle Non-Presigned PaymentRequests
         log.info('Returning BIP72 URI [Address: %s | ID: %s]' % (waddr, id))
-        return create_bip72_response(waddr, get_bip70_amount(id_obj), 'https://%s/resolve/%s?bip70=true&amount=%s' % (config.site_url, id_obj.id, get_bip70_amount(id_obj)))
+        return create_bip72_response(waddr, get_bip70_amount(id_obj), 'https://%s/address/%s/resolve?bip70=true&amount=%s' % (config.site_url, id_obj.id, get_bip70_amount(id_obj)))
 
     # Return Standard BIP72 URI Response without a PaymentRequest URI
     log.info('Returning Wallet Address [Address: %s | ID: %s]' % (waddr, id))

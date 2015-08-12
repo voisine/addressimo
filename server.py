@@ -61,17 +61,17 @@ PluginManager.register_plugins()
 def index():
     return Response("UP", status=200, mimetype='text/html')
 
-@app.route('/resolve/<id>', methods=['GET'])
+@app.route('/address/<id>/resolve', methods=['GET'])
 @limiter.limit("60 per minute")
 def resolve_id(id):
     return resolve(id)
 
-@app.route('/resolve/<id>', methods=['POST'])
+@app.route('/address/<id>/resolve', methods=['POST'])
 @limiter.limit("60 per minute")
 def submit_pr_request(id):
     return PRR.submit_prr(id)
 
-@app.route('/branches/<id>', methods=['GET'])
+@app.route('/address/<id>/branches', methods=['GET'])
 @limiter.limit("10 per minute")
 def get_used_branches(id):
     return return_used_branches(id)
@@ -81,32 +81,32 @@ def get_used_branches(id):
 def register_sf_endpoint():
     return StoreForward.register()
 
-@app.route('/sf/<id>', methods=['PUT'])
+@app.route('/address/<id>/sf', methods=['PUT'])
 @limiter.limit("10 per minute")
 def add_sf_paymentrequests(id):
     return StoreForward.add()
 
-@app.route('/sf/<id>', methods=['DELETE'])
+@app.route('/address/<id>/sf', methods=['DELETE'])
 @limiter.limit("10 per minute")
 def remove_sf_endpoint(id):
     return StoreForward.delete()
 
-@app.route('/sf/<id>', methods=['GET'])
+@app.route('/address/<id>/sf', methods=['GET'])
 @limiter.limit("10 per minute")
 def sf_getcount(id):
     return StoreForward.get_count()
 
-@app.route('/prr/<id>', methods=['GET'])
+@app.route('/address/<id>/prr', methods=['GET'])
 @limiter.limit("10 per minute")
 def get_prr(id):
     return PRR.get_queued_pr_requests(id)
 
-@app.route('/prr/<id>', methods=['POST'])
+@app.route('/address/<id>/prr', methods=['POST'])
 @limiter.limit("10 per minute")
 def submit_return_pr(id):
     return PRR.submit_return_pr(id)
 
-@app.route('/pr/<id>', methods=['GET'])
+@app.route('/paymentrequest/<id>', methods=['GET'])
 @limiter.limit("10 per minute")
 def get_return_pr(id):
     return PRR.get_return_pr(id)

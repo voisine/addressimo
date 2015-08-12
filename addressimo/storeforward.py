@@ -50,7 +50,7 @@ class StoreForward:
         id_obj.auth_public_key = request.headers.get('x-identity')
         resolver.save(id_obj)
 
-        return create_json_response(data={'id': id_obj.id, 'endpoint': 'https://%s/resolve/%s' % (config.site_url, id_obj.id)})
+        return create_json_response(data={'id': id_obj.id, 'endpoint': 'https://%s/address/%s/resolve' % (config.site_url, id_obj.id)})
 
     @staticmethod
     @requires_public_key

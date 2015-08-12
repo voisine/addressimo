@@ -199,7 +199,7 @@ class TestResolve(AddressimoTestCase):
         # Validate Response
         self.assertIsNone(self.mockCreateBip72Response.call_args[0][0])
         self.assertIsNone(self.mockCreateBip72Response.call_args[0][1])
-        self.assertEqual('https://%s/resolve/id?bip70=true' % config.site_url, self.mockCreateBip72Response.call_args[0][2])
+        self.assertEqual('https://%s/address/id/resolve?bip70=true' % config.site_url, self.mockCreateBip72Response.call_args[0][2])
 
     def test_presigned_payment_request_non_bip70_args_request_no_requests_only(self):
 

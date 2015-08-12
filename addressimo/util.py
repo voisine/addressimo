@@ -6,6 +6,7 @@ import logging.handlers
 import os
 import sys
 import urllib
+from urlparse import urlparse
 
 from ecdsa import curves
 from ecdsa.der import UnexpectedDER
@@ -114,10 +115,11 @@ def create_bip72_response(wallet_address, amount, payment_request_url=None):
 
 def get_id():
 
-    vals = request.url.rsplit('/',1)
-    if len(vals) == 2:
-        return vals[1]
-    return None
+    parsed = urlparse(request.url)
+    path_parts = parsed.path[1:].split('/')
+    if len(path_parts) < 2:
+        return None
+    return path_parts[1]
 
 def requires_valid_signature(f):
 
@@ -127,9 +129,6 @@ def requires_valid_signature(f):
     def check_sig(*args, **kwargs):
 
         id = get_id()
-        if not id:
-            log.info('ID Unavailable from request: %s' % request.url)
-            return create_json_response(False, 'Unknown Endpoint', 404)
 
         if request.headers.get('x-signature'):
             sig = request.headers.get('x-signature')
