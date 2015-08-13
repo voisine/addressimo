@@ -85,7 +85,7 @@ class PRRFunctionalTest(LiveServerTestCase):
 
     def create_app(self):
         app.config['TESTING'] = True
-        app.config['LIVESERVER_PORT'] = 5000
+        app.config['LIVESERVER_PORT'] = 47294
         app.config['DEBUG'] = True
         return app
 
@@ -255,7 +255,7 @@ class PRRFunctionalTest(LiveServerTestCase):
         receiving_pubkey = VerifyingKey.from_string(resp_json.get('receiver_pubkey').decode('hex'), curve=curves.SECP256k1)
         decrypt_ecdh_point = self.sender_sk.privkey.secret_multiplier * receiving_pubkey.pubkey.point
 
-        # Encrypt PR
+        # Decrypt PR
         # TODO: Perhaps we should use ECIES here? Unfortunately it's not as secure as AES256
         secret_key = hashlib.sha256(str(decrypt_ecdh_point.x())).digest()
         iv = hashlib.sha256(secret_key).digest()[0:16]
