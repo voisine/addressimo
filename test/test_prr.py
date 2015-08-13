@@ -30,8 +30,11 @@ class TestSubmitPrr(AddressimoTestCase):
             'amount': 75,
             'notification_url': 'https://notify.me/longId',
             'x509_cert': '--- START CERT --- ... --- END CERT ---',
-            'signature': 'test_signature'
+            'signature': 'test_signature'.encode('hex')
         }
+
+        self.sig_data = copy.copy(self.request_data)
+        del self.sig_data['signature']
 
         self.ret_prr_data = {"id":"prr_id"}
 
@@ -76,8 +79,8 @@ class TestSubmitPrr(AddressimoTestCase):
 
         self.assertEqual(1, self.mockCrypto.verify.call_count)
         self.assertEqual(self.mockCrypto.load_certificate.return_value, self.mockCrypto.verify.call_args[0][0])
-        self.assertEqual(self.request_data['signature'], self.mockCrypto.verify.call_args[0][1])
-        self.assertEqual("test_urltest_data", self.mockCrypto.verify.call_args[0][2])
+        self.assertEqual(self.request_data['signature'].decode('hex'), self.mockCrypto.verify.call_args[0][1])
+        self.assertEqual('test_url%s' % json.dumps(self.sig_data), self.mockCrypto.verify.call_args[0][2])
         self.assertEqual("sha1", self.mockCrypto.verify.call_args[0][3])
 
         self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.add_prr.call_count)
@@ -228,8 +231,8 @@ class TestSubmitPrr(AddressimoTestCase):
 
         self.assertEqual(1, self.mockCrypto.verify.call_count)
         self.assertEqual(self.mockCrypto.load_certificate.return_value, self.mockCrypto.verify.call_args[0][0])
-        self.assertEqual(self.request_data['signature'], self.mockCrypto.verify.call_args[0][1])
-        self.assertEqual("test_urltest_data", self.mockCrypto.verify.call_args[0][2])
+        self.assertEqual(self.request_data['signature'].decode('hex'), self.mockCrypto.verify.call_args[0][1])
+        self.assertEqual('test_url%s' % json.dumps(self.sig_data), self.mockCrypto.verify.call_args[0][2])
         self.assertEqual("sha1", self.mockCrypto.verify.call_args[0][3])
 
         self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.add_prr.call_count)
@@ -258,8 +261,8 @@ class TestSubmitPrr(AddressimoTestCase):
 
         self.assertEqual(1, self.mockCrypto.verify.call_count)
         self.assertEqual(self.mockCrypto.load_certificate.return_value, self.mockCrypto.verify.call_args[0][0])
-        self.assertEqual(self.request_data['signature'], self.mockCrypto.verify.call_args[0][1])
-        self.assertEqual("test_urltest_data", self.mockCrypto.verify.call_args[0][2])
+        self.assertEqual(self.request_data['signature'].decode('hex'), self.mockCrypto.verify.call_args[0][1])
+        self.assertEqual('test_url%s' % json.dumps(self.sig_data), self.mockCrypto.verify.call_args[0][2])
         self.assertEqual("sha1", self.mockCrypto.verify.call_args[0][3])
 
         self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.add_prr.call_count)
@@ -297,8 +300,8 @@ class TestSubmitPrr(AddressimoTestCase):
 
         self.assertEqual(1, self.mockCrypto.verify.call_count)
         self.assertEqual(self.mockCrypto.load_certificate.return_value, self.mockCrypto.verify.call_args[0][0])
-        self.assertEqual(self.request_data['signature'], self.mockCrypto.verify.call_args[0][1])
-        self.assertEqual("test_urltest_data", self.mockCrypto.verify.call_args[0][2])
+        self.assertEqual(self.request_data['signature'].decode('hex'), self.mockCrypto.verify.call_args[0][1])
+        self.assertEqual('test_url%s' % json.dumps(self.sig_data), self.mockCrypto.verify.call_args[0][2])
         self.assertEqual("sha1", self.mockCrypto.verify.call_args[0][3])
 
         self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.add_prr.call_count)
@@ -472,13 +475,11 @@ class TestSubmitReturnPr(AddressimoTestCase):
 
         add_pr_call = self.mockPluginManager.get_plugin.return_value.add_return_pr
         json_data = self.mockRequest.get_json.return_value
-        self.assertEqual('test_id', add_pr_call.call_args_list[0][0][0])
         self.assertEqual('utcnow', json_data['ready_requests'][0]['submit_date'])
-        self.assertEqual(json_data['ready_requests'][0], add_pr_call.call_args_list[0][0][1])
+        self.assertEqual(json_data['ready_requests'][0], add_pr_call.call_args_list[0][0][0])
 
-        self.assertEqual('test_id', add_pr_call.call_args_list[1][0][0])
         self.assertEqual('utcnow', json_data['ready_requests'][1]['submit_date'])
-        self.assertEqual(json_data['ready_requests'][1], add_pr_call.call_args_list[1][0][1])
+        self.assertEqual(json_data['ready_requests'][1], add_pr_call.call_args_list[1][0][0])
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.delete_prr.call_count)
         self.assertEqual('test_id', self.mockPluginManager.get_plugin.return_value.delete_prr.call_args_list[0][0][0])
@@ -599,9 +600,8 @@ class TestSubmitReturnPr(AddressimoTestCase):
         json_data = self.mockRequest.get_json.return_value
 
         self.assertNotIn('submit_data', json_data['ready_requests'][0])
-        self.assertEqual('test_id', add_pr_call.call_args[0][0])
         self.assertEqual('utcnow', json_data['ready_requests'][1]['submit_date'])
-        self.assertEqual(json_data['ready_requests'][1], add_pr_call.call_args[0][1])
+        self.assertEqual(json_data['ready_requests'][1], add_pr_call.call_args[0][0])
 
         self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.delete_prr.call_count)
         self.assertEqual('test_id', self.mockPluginManager.get_plugin.return_value.delete_prr.call_args[0][0])
@@ -627,13 +627,11 @@ class TestSubmitReturnPr(AddressimoTestCase):
 
         add_pr_call = self.mockPluginManager.get_plugin.return_value.add_return_pr
         json_data = self.mockRequest.get_json.return_value
-        self.assertEqual('test_id', add_pr_call.call_args_list[0][0][0])
         self.assertEqual('utcnow', json_data['ready_requests'][0]['submit_date'])
-        self.assertEqual(json_data['ready_requests'][0], add_pr_call.call_args_list[0][0][1])
+        self.assertEqual(json_data['ready_requests'][0], add_pr_call.call_args_list[0][0][0])
 
-        self.assertEqual('test_id', add_pr_call.call_args_list[1][0][0])
         self.assertEqual('utcnow', json_data['ready_requests'][1]['submit_date'])
-        self.assertEqual(json_data['ready_requests'][1], add_pr_call.call_args_list[1][0][1])
+        self.assertEqual(json_data['ready_requests'][1], add_pr_call.call_args_list[1][0][0])
 
         self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.delete_prr.call_count)
         self.assertEqual('test_id', self.mockPluginManager.get_plugin.return_value.delete_prr.call_args[0][0])
@@ -659,13 +657,11 @@ class TestSubmitReturnPr(AddressimoTestCase):
 
         add_pr_call = self.mockPluginManager.get_plugin.return_value.add_return_pr
         json_data = self.mockRequest.get_json.return_value
-        self.assertEqual('test_id', add_pr_call.call_args_list[0][0][0])
         self.assertEqual('utcnow', json_data['ready_requests'][0]['submit_date'])
-        self.assertEqual(json_data['ready_requests'][0], add_pr_call.call_args_list[0][0][1])
+        self.assertEqual(json_data['ready_requests'][0], add_pr_call.call_args_list[0][0][0])
 
-        self.assertEqual('test_id', add_pr_call.call_args_list[1][0][0])
         self.assertEqual('utcnow', json_data['ready_requests'][1]['submit_date'])
-        self.assertEqual(json_data['ready_requests'][1], add_pr_call.call_args_list[1][0][1])
+        self.assertEqual(json_data['ready_requests'][1], add_pr_call.call_args_list[1][0][0])
 
         self.assertEqual(2, self.mockPluginManager.get_plugin.return_value.delete_prr.call_count)
         self.assertEqual('test_id', self.mockPluginManager.get_plugin.return_value.delete_prr.call_args_list[0][0][0])

@@ -7,7 +7,7 @@ from uuid import uuid4
 from BaseResolver import BaseResolver
 from addressimo.config import config
 from addressimo.data import IdObject
-from addressimo.util import LogUtil
+from addressimo.util import LogUtil, CustomJSONEncoder
 
 log = LogUtil.setup_logging()
 
@@ -92,7 +92,7 @@ class RedisResolver(BaseResolver):
             id_obj.id = temp_id
 
         try:
-            result = redis_client.set(id_obj.id, json.dumps(id_obj))
+            result = redis_client.set(id_obj.id, json.dumps(id_obj, cls=CustomJSONEncoder))
             log.info('Saved IdObject to Redis [ID: %s]' % id_obj.id)
             return result
         except Exception as e:
@@ -128,7 +128,7 @@ class RedisResolver(BaseResolver):
                     raise
 
         try:
-            result = redis_client.hset(id, prr_data['id'], json.dumps(prr_data))
+            result = redis_client.hset(id, prr_data['id'], json.dumps(prr_data, cls=CustomJSONEncoder))
             if result != 1:
                 return None
 
@@ -166,7 +166,7 @@ class RedisResolver(BaseResolver):
         redis_client = Redis.from_url(config.redis_prr_queue)
 
         try:
-            result = redis_client.set(return_pr['id'], json.dumps(return_pr))
+            result = redis_client.set(return_pr['id'], json.dumps(return_pr, cls=CustomJSONEncoder))
             if result != 1:
                 raise Exception('Redis Set Command Failed')
         except Exception as e:

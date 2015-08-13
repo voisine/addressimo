@@ -6,13 +6,14 @@ import logging.handlers
 import os
 import sys
 import urllib
-from urlparse import urlparse
 
+from datetime import datetime
 from ecdsa import curves
 from ecdsa.der import UnexpectedDER
 from ecdsa.keys import VerifyingKey, BadDigestError, BadSignatureError
 from flask import request, current_app, Response
 from functools import wraps
+from time import mktime
 from urlparse import urlparse
 
 from addressimo.config import config
@@ -196,3 +197,10 @@ class LogUtil():
         log.info("Logger Initialized [%s]" % app_name)
         cls.loggers[app_name] = log
         return log
+
+class CustomJSONEncoder(json.JSONEncoder):
+
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return int(mktime(obj.timetuple()))
+        return json.JSONEncoder.default(self, obj)

@@ -144,8 +144,9 @@ class TestRegisterPlugins(AddressimoTestCase):
 
         PluginManager.register_plugins()
 
-        self.assertEqual(1, self.mockOs.path.exists.call_count)
-        self.assertEqual(config.home_dir, self.mockOs.path.exists.call_args[0][0])
+        self.assertEqual(2, self.mockOs.path.exists.call_count)
+        self.assertEqual(config.home_dir, self.mockOs.path.exists.call_args_list[0][0][0])
+        self.assertEqual('/my/test/dir/../addressimo', self.mockOs.path.exists.call_args_list[1][0][0])
 
         self.assertEqual(1, self.mockOs.listdir.call_count)
         self.assertEqual('%s/dir1' % config.home_dir, self.mockOs.listdir.call_args[0][0])
@@ -190,6 +191,28 @@ class TestRegisterPlugins(AddressimoTestCase):
 
         self.assertEqual(1, self.mockOs.listdir.call_count)
         self.assertEqual('/my/test/addressimo/dir1', self.mockOs.listdir.call_args[0][0])
+
+        self.assertEqual(2, self.mockImportModule.call_count)
+        self.assertEqual('addressimo.dir1.one', self.mockImportModule.call_args_list[0][0][0])
+        self.assertEqual('addressimo.dir1.two', self.mockImportModule.call_args_list[1][0][0])
+
+        self.assertEqual(2, self.mockInspect.getmembers.call_count)
+        self.assertTrue(Plugin1.register_called)
+        self.assertTrue(Plugin2.register_called)
+        self.assertFalse(NotPlugin.register_called)
+
+    def test_homedir_doesnt_exist_and_down_one_directory(self):
+
+        self.mockOs.path.exists.side_effect = [False, True]
+        self.mockOs.getcwd.return_value = '/my/test/addressimo/downone'
+
+        PluginManager.register_plugins()
+
+        self.assertEqual(2, self.mockOs.path.exists.call_count)
+        self.assertEqual('/my/test/addressimo/downone/../addressimo', self.mockOs.path.exists.call_args[0][0])
+
+        self.assertEqual(1, self.mockOs.listdir.call_count)
+        self.assertEqual('/my/test/addressimo/downone/../addressimo/dir1', self.mockOs.listdir.call_args[0][0])
 
         self.assertEqual(2, self.mockImportModule.call_count)
         self.assertEqual('addressimo.dir1.one', self.mockImportModule.call_args_list[0][0][0])

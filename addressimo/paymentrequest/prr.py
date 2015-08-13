@@ -1,5 +1,8 @@
 __author__ = 'Matt David'
 
+import copy
+import json
+
 from collections import defaultdict
 from datetime import datetime
 from flask import request
@@ -62,7 +65,9 @@ class PRR:
                 return create_json_response(False, 'Invalid x509 Certificate', 400)
 
             try:
-                crypto.verify(cert, rdata.get('signature'), request.url + request.data, 'sha1')
+                sig_data = copy.copy(rdata)
+                del sig_data['signature']
+                crypto.verify(cert, rdata.get('signature').decode('hex'), request.url + json.dumps(sig_data), 'sha1')
             except Exception as e:
                 log.info('Bad Signature Encountered During Signature Validation [ID: %s]: %s' % (id, str(e)))
                 return create_json_response(False, 'Signature Verification Error', 401)
@@ -132,7 +137,7 @@ class PRR:
             # Add Return PR to Redis for later retrieval
             try:
                 ready_request['submit_date'] = datetime.utcnow()
-                resolver.add_return_pr(id, ready_request)
+                resolver.add_return_pr(ready_request)
             except Exception as e:
                 log.error("Unable to Add Return PR: %s" % str(e))
                 failures[ready_request['id']].append('Unable to Process Return PaymentRequest')
