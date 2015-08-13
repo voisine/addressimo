@@ -1,5 +1,6 @@
 Flask==0.10.1
 Flask-Limiter==0.7.9
+Flask-Testing==0.4.2
 Jinja2==2.7.3
 MarkupSafe==0.23
 Werkzeug==0.10.4
@@ -24,6 +25,7 @@ pyasn1==0.1.7
 pybitcointools==1.1.15
 pycoin==0.52
 pycparser==2.14
+pycrypto==2.6.1
 redis==2.10.3
 requests==2.7.0
 simpleflock==0.0.2
