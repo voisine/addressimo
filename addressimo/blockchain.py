@@ -32,3 +32,7 @@ def get_block(blockheight):
     blockhash = conn.getblockhash(blockheight)
     return conn.proxy.getblock(blockhash, False)
 
+def submit_transaction(tx):
+    conn = connect()
+
+    return conn.proxy.sendrawtransaction(tx)

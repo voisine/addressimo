@@ -56,7 +56,7 @@ def get_certs(x509_pem_format):
 
     return certs
 
-def generate_payment_request(crypto_addr, x509_cert, signer=None, amount=0, expires=None, memo=None, payment_url=None, merchant_data=None):
+def generate_payment_request(crypto_addr, x509_cert, expires, signer=None, amount=0, memo=None, payment_url=None, merchant_data=None):
 
     # Setup & Populate PaymentDetails
     payment_details = PaymentDetails()
@@ -77,13 +77,7 @@ def generate_payment_request(crypto_addr, x509_cert, signer=None, amount=0, expi
     # Add current and expiration epoch time values
     payment_details.time = int(datetime.utcnow().strftime('%s'))
 
-    if expires:
-        if isinstance(expires, int) or isinstance(expires, long):
-            payment_details.expires = int((datetime.utcnow() + timedelta(seconds=expires)).strftime('%s'))
-        elif isinstance(expires, datetime.__class__):
-            payment_details.expires = int(expires.strftime('%s'))
-    else:
-        payment_details.expires = int((datetime.utcnow() + timedelta(seconds=config.bip70_default_expiration)).strftime('%s'))
+    payment_details.expires = expires
 
     # Handle Various Optional Fields in PaymentDetails
     payment_details.memo = memo if memo else ''

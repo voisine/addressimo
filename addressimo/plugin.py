@@ -46,7 +46,6 @@ class PluginManager:
         for dir in config.plugin_directories:
 
             # Homedir doesn't exist, let's make an effort to see if we can find the homedir
-            log.critical('CWD DIR: %s' % os.getcwd())
             if not os.path.exists(config.home_dir):
                 log.warn('Configured Home Directory DOES NOT Exist, trying to recover... [CONFIGURED HOMEDIR: %s]' % config.home_dir)
                 cwd = os.getcwd()

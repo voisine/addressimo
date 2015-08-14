@@ -1,7 +1,7 @@
 __author__ = 'frank'
 
 # System Imports
-from mock import Mock, patch
+from mock import patch
 from test import AddressimoTestCase
 
 from addressimo.blockchain import *
@@ -101,3 +101,17 @@ class TestGetBlock(AddressimoTestCase):
 
         self.assertEqual(self.mockConnect.return_value.proxy.getblock.return_value, ret_val)
 
+
+class TestSubmitTransaction(AddressimoTestCase):
+    def setUp(self):
+        self.patcher1 = patch('addressimo.blockchain.connect')
+
+        self.mockConnect = self.patcher1.start()
+
+        self.mockConnect.return_value.proxy.sendrawtransaction.return_value = 'txhash'
+
+    def test_go_right(self):
+
+        ret_val = submit_transaction('transactionhere')
+
+        self.assertEqual('txhash', ret_val)

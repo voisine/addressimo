@@ -14,7 +14,7 @@ angular.module('addressimoUI.apiService', [])
 
             return function(data) {
 
-                var url_port = 5000;
+                var url_port = 5001;
                 if(service.$location.host() != 'localhost') {
                     url_port = service.$location.port();
                 }

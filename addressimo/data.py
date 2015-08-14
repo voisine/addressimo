@@ -1,6 +1,9 @@
 __author__ = 'Matt David'
 
 from attrdict import AttrDict
+from datetime import datetime, timedelta
+
+from addressimo.config import config
 
 # Used Datapoints:
 #
@@ -32,7 +35,7 @@ class IdObject(AttrDict):
         self.bip70_enabled = False
         self.prr_only = False
         self.wallet_address = None
-        self.expires = None
+        self.expires = 0
         self.memo = None
         self.master_public_key = None
         self.private_key = None
@@ -42,3 +45,12 @@ class IdObject(AttrDict):
         self.presigned_payment_requests = []
         self.presigned_only = False
         self.auth_public_key = None
+
+    def get_expires(self):
+        if self.expires:
+            if isinstance(self.expires, int) or isinstance(self.expires, long):
+                return int((datetime.utcnow() + timedelta(seconds=self.expires)).strftime('%s'))
+            elif isinstance(self.expires, datetime):
+                return int(self.expires.strftime('%s'))
+        else:
+            return int((datetime.utcnow() + timedelta(seconds=config.bip70_default_expiration)).strftime('%s'))

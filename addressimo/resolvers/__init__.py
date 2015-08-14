@@ -1,14 +1,11 @@
 __author__ = 'mdavid'
 
-from datetime import datetime
-
 from flask import request, Response
 from redis import Redis
 
 from addressimo.blockchain import cache_up_to_date
 from addressimo.config import config
 from addressimo.crypto import generate_bip32_address_from_extended_pubkey, generate_payment_request, get_unused_presigned_payment_request, derive_branch
-from addressimo.signer.LocalSigner import LocalSigner
 from addressimo.plugin import PluginManager
 from addressimo.util import create_json_response, create_bip72_response
 from addressimo.util import LogUtil, requires_valid_signature
@@ -154,16 +151,22 @@ def create_payment_request_response(wallet_addr, amount, id_obj):
     signer = PluginManager.get_plugin('SIGNER', config.signer_type)
     signer.set_id_obj(id_obj)
 
+    if not id_obj.payment_url:
+        log.info('Creating Addressimo payment_url [ID: %s]' % id_obj.id)
+
+        resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
+        payment_url_uuid = resolver.set_payment_request_meta_data(id_obj.get_expires(), wallet_addr, amount * 100000000)
+
     # Setup PaymentRequest
     pr = generate_payment_request(
         wallet_addr,
         id_obj.x509_cert,
+        id_obj.get_expires(),
         signer,
         amount,
-        id_obj.expires,
         id_obj.memo,
-        id_obj.payment_url,
-        id_obj.merchant_data
+        id_obj.payment_url or 'https://%s/payment/%s' % (config.site_url, payment_url_uuid),
+        id_obj.merchant_data if id_obj.payment_url else payment_url_uuid
     )
 
     return Response(response=pr, status=200, content_type=PR_MIMETYPE, headers={'Content-Transfer-Encoding': 'binary', 'Access-Control-Allow-Origin': '*'})

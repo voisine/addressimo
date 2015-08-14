@@ -6,6 +6,7 @@ from flask import Flask, Response, request
 
 from addressimo.config import config
 from addressimo.paymentrequest.prr import PRR
+from addressimo.paymentrequest.payment import Payments
 from addressimo.plugin import PluginManager
 from addressimo.resolvers import resolve, return_used_branches
 from addressimo.storeforward import StoreForward
@@ -110,6 +111,16 @@ def submit_return_pr(id):
 @limiter.limit("10 per minute")
 def get_return_pr(id):
     return PRR.get_return_pr(id)
+
+@app.route('/payment/<id>', methods=['POST'])
+@limiter.limit("10 per minute")
+def process_payment(id):
+    return Payments.process_payment(id)
+
+@app.route('/payment/<id>/refund/<tx>', methods=['GET'])
+@limiter.limit("10 per minute")
+def retrieve_refund_address(id, tx):
+    return Payments.retrieve_refund_address(id, tx)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

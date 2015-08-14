@@ -98,7 +98,7 @@ test-data3
         self.assertEqual('test-data2-----END CERTIFICATE-----', self.mockSsl.PEM_cert_to_DER_cert.call_args_list[1][0][0])
         self.assertEqual('test-data3-----END CERTIFICATE-----', self.mockSsl.PEM_cert_to_DER_cert.call_args_list[2][0][0])
 
-class GeneratePaymentRequest(AddressimoTestCase):
+class TestGeneratePaymentRequest(AddressimoTestCase):
 
     def setUp(self):
 
@@ -129,7 +129,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
     def test_go_right_defaults(self):
 
-        ret_val = generate_payment_request(self.crypto_addr, self.x509_cert, self.mockSigner)
+        ret_val = generate_payment_request(self.crypto_addr, self.x509_cert, 1435734000, self.mockSigner)
 
         self.assertIsNotNone(ret_val)
 
@@ -145,7 +145,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
         self.assertEqual(1, self.mockGetCerts.call_count)
         self.assertEqual(self.x509_cert, self.mockGetCerts.call_args[0][0])
 
-        self.assertEqual(2, self.mockDatetime.utcnow.call_count)
+        self.assertEqual(1, self.mockDatetime.utcnow.call_count)
         self.assertEqual(1, self.mockSigner.sign.call_count)
 
         pr = PaymentRequest()
@@ -157,7 +157,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
         pd = PaymentDetails()
         pd.ParseFromString(pr.serialized_payment_details)
-        self.assertEqual(1434212100, pd.expires)
+        self.assertEqual(1435734000L, pd.expires)
         self.assertEqual('', pd.memo)
         self.assertEqual('', pd.merchant_data)
         self.assertEqual('main', pd.network)
@@ -173,9 +173,9 @@ class GeneratePaymentRequest(AddressimoTestCase):
         ret_val = generate_payment_request(
             self.crypto_addr,
             self.x509_cert,
+            1435734000,
             self.mockSigner,
             amount=9999,
-            expires=datetime(2015,7,1),
             memo='memo',
             payment_url='https://payme.domain.com/path?query',
             merchant_data='merchant_data'
@@ -220,7 +220,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
     def test_no_signer(self):
 
-        ret_val = generate_payment_request(self.crypto_addr, self.x509_cert)
+        ret_val = generate_payment_request(self.crypto_addr, self.x509_cert, 1435734000)
 
         self.assertIsNotNone(ret_val)
 
@@ -235,7 +235,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
         self.assertEqual(0, self.mockGetCerts.call_count)
 
-        self.assertEqual(2, self.mockDatetime.utcnow.call_count)
+        self.assertEqual(1, self.mockDatetime.utcnow.call_count)
         self.assertEqual(0, self.mockSigner.sign.call_count)
 
         pr = PaymentRequest()
@@ -247,7 +247,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
         pd = PaymentDetails()
         pd.ParseFromString(pr.serialized_payment_details)
-        self.assertEqual(1434212100, pd.expires)
+        self.assertEqual(1435734000L, pd.expires)
         self.assertEqual('', pd.memo)
         self.assertEqual('', pd.merchant_data)
         self.assertEqual('main', pd.network)
@@ -260,91 +260,12 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
     def test_go_right_non_P2KH_non_hex_addr(self):
 
-        ret_val = generate_payment_request('addr', self.x509_cert, self.mockSigner)
+        ret_val = generate_payment_request('addr', self.x509_cert, 1435734000, self.mockSigner)
 
         self.assertIsNotNone(ret_val)
 
         self.assertEqual(0, self.mockSerializeScript.call_count)
         self.assertEqual(0, self.mockB58CheckToHex.call_count)
-
-        self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
-        self.assertEqual('LOGGER', self.mockPluginManager.get_plugin.call_args[0][0])
-
-        self.assertEqual(1, self.mockGetCerts.call_count)
-        self.assertEqual(self.x509_cert, self.mockGetCerts.call_args[0][0])
-
-        self.assertEqual(2, self.mockDatetime.utcnow.call_count)
-        self.assertEqual(1, self.mockSigner.sign.call_count)
-
-        pr = PaymentRequest()
-        pr.ParseFromString(ret_val)
-        self.assertEqual(1, pr.payment_details_version)
-        self.assertEqual('\n\x05cert1\n\x05cert2', pr.pki_data)
-        self.assertEqual('pki_type', pr.pki_type)
-        self.assertEqual('signature', pr.signature)
-
-        pd = PaymentDetails()
-        pd.ParseFromString(pr.serialized_payment_details)
-        self.assertEqual(1434212100, pd.expires)
-        self.assertEqual('', pd.memo)
-        self.assertEqual('', pd.merchant_data)
-        self.assertEqual('main', pd.network)
-        self.assertEqual('', pd.payment_url)
-        self.assertEqual(1434211200, pd.time)
-
-        for output in pd.outputs:
-            self.assertEqual(0, output.amount)
-            self.assertEqual('addr', output.script)
-
-    def test_go_right_non_P2KH_hex_addr(self):
-
-        ret_val = generate_payment_request('abcf9975', self.x509_cert, self.mockSigner)
-
-        self.assertIsNotNone(ret_val)
-
-        self.assertEqual(0, self.mockSerializeScript.call_count)
-        self.assertEqual(0, self.mockB58CheckToHex.call_count)
-
-        self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
-        self.assertEqual('LOGGER', self.mockPluginManager.get_plugin.call_args[0][0])
-
-        self.assertEqual(1, self.mockGetCerts.call_count)
-        self.assertEqual(self.x509_cert, self.mockGetCerts.call_args[0][0])
-
-        self.assertEqual(2, self.mockDatetime.utcnow.call_count)
-        self.assertEqual(1, self.mockSigner.sign.call_count)
-
-        pr = PaymentRequest()
-        pr.ParseFromString(ret_val)
-        self.assertEqual(1, pr.payment_details_version)
-        self.assertEqual('\n\x05cert1\n\x05cert2', pr.pki_data)
-        self.assertEqual('pki_type', pr.pki_type)
-        self.assertEqual('signature', pr.signature)
-
-        pd = PaymentDetails()
-        pd.ParseFromString(pr.serialized_payment_details)
-        self.assertEqual(1434212100, pd.expires)
-        self.assertEqual('', pd.memo)
-        self.assertEqual('', pd.merchant_data)
-        self.assertEqual('main', pd.network)
-        self.assertEqual('', pd.payment_url)
-        self.assertEqual(1434211200, pd.time)
-
-        for output in pd.outputs:
-            self.assertEqual(0, output.amount)
-            self.assertEqual('\xab\xcf\x99u', output.script)
-
-    def test_expires_datetime(self):
-
-        ret_val = generate_payment_request(self.crypto_addr, self.x509_cert, self.mockSigner, expires=datetime(2015,7,1))
-
-        self.assertIsNotNone(ret_val)
-
-        self.assertEqual(1, self.mockSerializeScript.call_count)
-        self.assertEqual([OP_DUP, OP_HASH160, self.mockB58CheckToHex.return_value, OP_EQUALVERIFY, OP_CHECKSIG], self.mockSerializeScript.call_args[0][0])
-
-        self.assertEqual(1, self.mockB58CheckToHex.call_count)
-        self.assertEqual(self.crypto_addr, self.mockB58CheckToHex.call_args[0][0])
 
         self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('LOGGER', self.mockPluginManager.get_plugin.call_args[0][0])
@@ -364,7 +285,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
         pd = PaymentDetails()
         pd.ParseFromString(pr.serialized_payment_details)
-        self.assertEqual(1435734000, pd.expires)
+        self.assertEqual(1435734000L, pd.expires)
         self.assertEqual('', pd.memo)
         self.assertEqual('', pd.merchant_data)
         self.assertEqual('main', pd.network)
@@ -373,19 +294,16 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
         for output in pd.outputs:
             self.assertEqual(0, output.amount)
-            self.assertEqual('\xbf\xfb\xff\xbf\xfb\xff', output.script)
+            self.assertEqual('addr', output.script)
 
-    def test_expires_number(self):
+    def test_go_right_non_P2KH_hex_addr(self):
 
-        ret_val = generate_payment_request(self.crypto_addr, self.x509_cert, self.mockSigner, expires=3600)
+        ret_val = generate_payment_request('abcf9975', self.x509_cert, 1435734000, self.mockSigner)
 
         self.assertIsNotNone(ret_val)
 
-        self.assertEqual(1, self.mockSerializeScript.call_count)
-        self.assertEqual([OP_DUP, OP_HASH160, self.mockB58CheckToHex.return_value, OP_EQUALVERIFY, OP_CHECKSIG], self.mockSerializeScript.call_args[0][0])
-
-        self.assertEqual(1, self.mockB58CheckToHex.call_count)
-        self.assertEqual(self.crypto_addr, self.mockB58CheckToHex.call_args[0][0])
+        self.assertEqual(0, self.mockSerializeScript.call_count)
+        self.assertEqual(0, self.mockB58CheckToHex.call_count)
 
         self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual('LOGGER', self.mockPluginManager.get_plugin.call_args[0][0])
@@ -393,7 +311,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
         self.assertEqual(1, self.mockGetCerts.call_count)
         self.assertEqual(self.x509_cert, self.mockGetCerts.call_args[0][0])
 
-        self.assertEqual(2, self.mockDatetime.utcnow.call_count)
+        self.assertEqual(1, self.mockDatetime.utcnow.call_count)
         self.assertEqual(1, self.mockSigner.sign.call_count)
 
         pr = PaymentRequest()
@@ -405,7 +323,7 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
         pd = PaymentDetails()
         pd.ParseFromString(pr.serialized_payment_details)
-        self.assertEqual(1434214800, pd.expires)
+        self.assertEqual(1435734000L, pd.expires)
         self.assertEqual('', pd.memo)
         self.assertEqual('', pd.merchant_data)
         self.assertEqual('main', pd.network)
@@ -414,7 +332,8 @@ class GeneratePaymentRequest(AddressimoTestCase):
 
         for output in pd.outputs:
             self.assertEqual(0, output.amount)
-            self.assertEqual('\xbf\xfb\xff\xbf\xfb\xff', output.script)
+            self.assertEqual('\xab\xcf\x99u', output.script)
+
 
 class TestGetUnusedPresignedPaymentRequest(AddressimoTestCase):
 

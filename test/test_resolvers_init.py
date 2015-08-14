@@ -671,7 +671,12 @@ class TestCreatePaymentRequestResponse(AddressimoTestCase):
         self.mock_id_obj.payment_url = 'pay_url'
         self.mock_id_obj.merchant_data = 'merchant_data'
 
-    def test_go_right(self):
+        self.mock_id_obj.get_expires.return_value = self.mock_id_obj.expires
+
+        # Mock payment_url_uuid response
+        self.mockPluginManager.get_plugin.return_value.set_payment_request_meta_data.return_value = 'pay_url_uuid'
+
+    def test_go_right_with_payment_url(self):
 
         create_payment_request_response('wallet_addr', 1000, self.mock_id_obj)
 
@@ -684,12 +689,49 @@ class TestCreatePaymentRequestResponse(AddressimoTestCase):
         call_args = self.mockGeneratePR.call_args[0]
         self.assertEqual('wallet_addr', call_args[0])
         self.assertEqual(self.mock_id_obj.x509_cert, call_args[1])
-        self.assertEqual(self.mockPluginManager.get_plugin.return_value, call_args[2])
-        self.assertEqual(1000, call_args[3])
-        self.assertEqual(self.mock_id_obj.expires, call_args[4])
+        self.assertEqual(self.mock_id_obj.expires, call_args[2])
+        self.assertEqual(self.mockPluginManager.get_plugin.return_value, call_args[3])
+        self.assertEqual(1000, call_args[4])
         self.assertEqual(self.mock_id_obj.memo, call_args[5])
         self.assertEqual(self.mock_id_obj.payment_url, call_args[6])
         self.assertEqual(self.mock_id_obj.merchant_data, call_args[7])
+
+        # Validate Response call args
+        call_args = self.mockResponse.call_args[1]
+        self.assertEqual('application/bitcoin-paymentrequest', call_args['content_type'])
+        self.assertDictEqual({'Access-Control-Allow-Origin': '*', 'Content-Transfer-Encoding': 'binary'}, call_args['headers'])
+        self.assertEqual(self.mockGeneratePR.return_value, call_args['response'])
+        self.assertEqual(200, call_args['status'])
+
+    def test_go_right_without_payment_url(self):
+
+        # Setup test case
+        self.mock_id_obj.payment_url = None
+
+        create_payment_request_response('wallet_addr', 1000, self.mock_id_obj)
+
+        self.assertEqual(1, self.mockGeneratePR.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_id_obj.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_payment_request_meta_data.call_count)
+        self.assertEqual(1, self.mockResponse.call_count)
+
+        # Validate set_payment_request_meta_data call args
+        call_args = self.mockPluginManager.get_plugin.return_value.set_payment_request_meta_data.call_args[0]
+        self.assertEqual(self.mock_id_obj.get_expires(), call_args[0])
+        self.assertEqual('wallet_addr', call_args[1])
+        self.assertEqual(1000 * 100000000, call_args[2])
+
+        # Validate generate_payment_request call args
+        call_args = self.mockGeneratePR.call_args[0]
+        self.assertEqual('wallet_addr', call_args[0])
+        self.assertEqual(self.mock_id_obj.x509_cert, call_args[1])
+        self.assertEqual(self.mock_id_obj.expires, call_args[2])
+        self.assertEqual(self.mockPluginManager.get_plugin.return_value, call_args[3])
+        self.assertEqual(1000, call_args[4])
+        self.assertEqual(self.mock_id_obj.memo, call_args[5])
+        self.assertEqual('https://addressimo.netki.com/payment/pay_url_uuid', call_args[6])
+        self.assertEqual('pay_url_uuid', call_args[7])
 
         # Validate Response call args
         call_args = self.mockResponse.call_args[1]

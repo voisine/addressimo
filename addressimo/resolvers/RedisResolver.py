@@ -1,6 +1,8 @@
 __author__ = 'Matt David'
 
 import json
+from datetime import datetime, timedelta
+from time import mktime
 from redis import Redis
 from uuid import uuid4
 
@@ -182,3 +184,52 @@ class RedisResolver(BaseResolver):
         except Exception as e:
             log.info('Unable to Get Return PR %s: %s' % (id, str(e)))
             raise
+
+    # Payment Data Handling
+    def get_payment_request_meta_data(self, uuid):
+
+        redis_client = Redis.from_url(config.redis_pr_store)
+
+        return redis_client.hgetall(uuid)
+
+    def set_payment_request_meta_data(self, expiration_date, wallet_addr, amount):
+
+        log.info(config)
+        redis_client = Redis.from_url(config.redis_pr_store)
+
+        # Only continue if uuid doesn't already exist in Redis
+        while True:
+            payment_url_uuid = '%s%s' % (uuid4().hex, uuid4().hex)
+            if not redis_client.hkeys(payment_url_uuid):
+                break
+
+        payment_addresses = {
+            wallet_addr: amount
+        }
+
+        redis_client.hmset(payment_url_uuid, {
+            'expiration_date': expiration_date,
+            'payment_validation_data': json.dumps(payment_addresses)
+        })
+
+        return payment_url_uuid
+
+    def set_payment_meta_data(self, tx_hash, memo, refund_address):
+
+        redis_client = Redis.from_url(config.redis_payment_store)
+
+        redis_client.hmset(tx_hash, {
+            'memo': memo,
+            'refund_to': refund_address,
+            # TODO: Add days to config
+            'expiration_date': int(mktime((datetime.utcnow() + timedelta(days=61)).timetuple()))
+        })
+
+    def get_refund_address_from_tx_hash(self, tx_hash):
+
+        redis_client = Redis.from_url(config.redis_payment_store)
+
+        result = redis_client.hgetall(tx_hash)
+        del(result['expiration_date'])
+
+        return result

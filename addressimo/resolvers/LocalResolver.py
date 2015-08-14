@@ -34,6 +34,16 @@ dGhvcml0aWVzIGluc2lzdGVkIG9uIGl0cyBiZWluZyByZWNlaXZlZCwgZm9yIGdvb2Qgb3IgZm9y
 IGV2aWwsIGluIHRoZSBzdXBlcmxhdGl2ZSBkZWdyZWUgb2YgY29tcGFyaXNvbiBvbmx5Lg=="""
     }
 
+    local_payment_request_meta_data = {
+        'expiration_date': '2015-08-08 00:56:44.102893',
+        'payment_validation_data': '{"2addr": "2value", "1adder": "1value"}'
+    }
+
+    local_refund_data = {
+        'memo': 'my memo',
+        'refund_to': '1addr'
+    }
+
     obj_config = {
         '1234567890abcdef': {
             'wallet_address': '1CpLXM15vjULK3ZPGUTDMUcGATGR9xGitv',
@@ -128,6 +138,19 @@ rFhAxdbeHjwhElfusbIPLl8jNikPKYIjynm3P+4oTU8jzSqF6FiOTA==
 
     def get_return_pr(self, id):
         return self.local_return_pr
+
+    # Payment Data Handling
+    def get_payment_request_meta_data(self, uuid):
+        return self.local_payment_request_meta_data
+
+    def set_payment_request_meta_data(self, expiration_date, wallet_addr, amount):
+        return
+
+    def set_payment_meta_data(self, tx_hash, memo, refund_address):
+        return
+
+    def get_refund_address_from_tx_hash(self, tx_hash):
+        return self.local_refund_data
 
     @classmethod
     def get_plugin_name(cls):

@@ -42,6 +42,19 @@ class BaseResolver(BasePlugin):
     def get_return_pr(self, id):
         raise NotImplementedError
 
+    # Payment Data Handling
+    def get_payment_request_meta_data(self, uuid):
+        raise NotImplementedError
+
+    def set_payment_request_meta_data(self, expiration_date, wallet_addr, amount):
+        raise NotImplementedError
+
+    def set_payment_meta_data(self, tx_hash, memo, refund_address):
+        raise NotImplementedError
+
+    def get_refund_address_from_tx_hash(self, tx_hash):
+        raise NotImplementedError
+
     @classmethod
     def get_plugin_category(cls):
         return 'RESOLVER'

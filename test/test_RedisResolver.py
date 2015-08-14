@@ -305,6 +305,7 @@ class TestDelete(AddressimoTestCase):
         call_args = self.mockRedis.from_url.return_value.delete.call_args[0]
         self.assertEqual(self.mock_id_obj.id, call_args[0])
 
+
 class TestAddPRR(AddressimoTestCase):
 
     def setUp(self):
@@ -400,6 +401,7 @@ class TestAddPRR(AddressimoTestCase):
         self.assertEqual('uuid4uuid4uuid4', self.mockRedis.from_url.return_value.hset.call_args[0][1])
         self.assertEqual('{"id": "uuid4uuid4uuid4", "key": "value"}', self.mockRedis.from_url.return_value.hset.call_args[0][2])
 
+
 class TestGetPRRs(AddressimoTestCase):
 
     def setUp(self):
@@ -452,6 +454,7 @@ class TestGetPRRs(AddressimoTestCase):
         self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
         self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
 
+
 class TestDeletePRR(AddressimoTestCase):
 
     def setUp(self):
@@ -500,6 +503,7 @@ class TestDeletePRR(AddressimoTestCase):
         self.assertEqual(self.submit_id, self.mockRedis.from_url.return_value.hdel.call_args[0][0])
         self.assertEqual(self.prr_id, self.mockRedis.from_url.return_value.hdel.call_args[0][1])
 
+
 class TestAddReturnPR(AddressimoTestCase):
 
     def setUp(self):
@@ -546,6 +550,7 @@ class TestAddReturnPR(AddressimoTestCase):
         self.assertEqual('rpr_id', self.mockRedis.from_url.return_value.set.call_args[0][0])
         self.assertEqual('{"id": "rpr_id"}', self.mockRedis.from_url.return_value.set.call_args[0][1])
 
+
 class TestGetReturnPR(AddressimoTestCase):
 
     def setUp(self):
@@ -579,3 +584,149 @@ class TestGetReturnPR(AddressimoTestCase):
         self.assertEqual(1, self.mockRedis.from_url.call_count)
         self.assertEqual(1, self.mockRedis.from_url.return_value.get.call_count)
         self.assertEqual('rpr_id', self.mockRedis.from_url.return_value.get.call_args[0][0])
+
+
+class TestGetPaymentRequestMetaData(AddressimoTestCase):
+
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        self.mockRedis.from_url.return_value.hgetall.return_value = json.dumps({"key": "value"})
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        ret_val = self.rr.get_payment_request_meta_data('uuid')
+
+        self.assertDictEqual({'key': 'value'}, json.loads(ret_val))
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual('uuid', self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
+
+
+class TestSetPaymentRequestMetaData(AddressimoTestCase):
+
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+        self.patcher2 = patch('addressimo.resolvers.RedisResolver.uuid4')
+        self.patcher3 = patch('addressimo.resolvers.RedisResolver.datetime')
+
+        self.mockRedis = self.patcher1.start()
+        self.mockUUID = self.patcher2.start()
+        self.mockDatetime = self.patcher3.start()
+
+        self.mockUUID.return_value.hex = 'abc123'
+        self.mockRedis.from_url.return_value.hkeys.return_value = False
+
+        self.now = self.mockDatetime.utcnow.return_value = datetime.utcnow()
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right_one_iteration(self):
+
+        ret_val = self.rr.set_payment_request_meta_data(int(self.now.strftime('%s')), 'wallet_addr', 'amount')
+
+        # Validate return data
+        self.assertEqual('abc123abc123', ret_val)
+
+        # Validate call count
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hkeys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hmset.call_count)
+
+        # Validate Redis call data
+        self.assertEqual('abc123abc123', self.mockRedis.from_url.return_value.hkeys.call_args[0][0])
+
+        self.assertEqual('abc123abc123', self.mockRedis.from_url.return_value.hmset.call_args[0][0])
+        self.assertDictEqual(
+            {'expiration_date': int(self.now.strftime('%s')), 'payment_validation_data': '%s' % json.dumps({'wallet_addr': 'amount'})},
+            self.mockRedis.from_url.return_value.hmset.call_args[0][1]
+        )
+
+    def test_go_right_two_iterations(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.hkeys.side_effect = [True, False]
+
+        ret_val = self.rr.set_payment_request_meta_data(int(self.now.strftime('%s')), 'wallet_addr', 'amount')
+
+        # Validate return data
+        self.assertEqual('abc123abc123', ret_val)
+
+        # Validate call count
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(2, self.mockRedis.from_url.return_value.hkeys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hmset.call_count)
+
+        # Validate Redis call data
+        self.assertEqual('abc123abc123', self.mockRedis.from_url.return_value.hkeys.call_args_list[0][0][0])
+        self.assertEqual('abc123abc123', self.mockRedis.from_url.return_value.hkeys.call_args_list[1][0][0])
+
+        self.assertEqual('abc123abc123', self.mockRedis.from_url.return_value.hmset.call_args[0][0])
+        self.assertDictEqual(
+            {'expiration_date': int(self.now.strftime('%s')), 'payment_validation_data': '%s' % json.dumps({'wallet_addr': 'amount'})},
+            self.mockRedis.from_url.return_value.hmset.call_args[0][1]
+        )
+
+
+class TestSetPaymentMetaData(AddressimoTestCase):
+
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+        self.patcher2 = patch('addressimo.resolvers.RedisResolver.datetime')
+
+        self.mockRedis = self.patcher1.start()
+        self.mockDatetime = self.patcher2.start()
+
+        self.now = self.mockDatetime.utcnow.return_value = datetime.utcnow()
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        self.rr.set_payment_meta_data('tx_hash', 'memo', 'refund_address')
+
+        # Validate call count
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hmset.call_count)
+
+        # Validate Redis call data
+        self.assertEqual('tx_hash', self.mockRedis.from_url.return_value.hmset.call_args[0][0])
+        self.assertDictEqual(
+            {'memo': 'memo', 'refund_to': 'refund_address', 'expiration_date': int(mktime((self.now + timedelta(days=61)).timetuple()))},
+            self.mockRedis.from_url.return_value.hmset.call_args[0][1]
+        )
+
+
+class TestGetRefundAddressFromTxHash(AddressimoTestCase):
+
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+
+        self.mockRedis = self.patcher1.start()
+
+        self.mockRedis.from_url.return_value.hgetall.return_value = {'key': 'value', 'expiration_date': 'thedate'}
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+    def test_go_right(self):
+
+        ret_val = self.rr.get_refund_address_from_tx_hash('tx_hash')
+
+        # Validate Return value
+        self.assertDictEqual({'key': 'value'}, ret_val)
+
+        # Validate call count
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+
+        # Validate Redis call data
+        self.assertEqual('tx_hash', self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
+
