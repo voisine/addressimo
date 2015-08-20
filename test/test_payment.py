@@ -368,6 +368,28 @@ class TestProcessPayment(AddressimoTestCase):
         )
         self.assertEqual(500, self.mockCreateJSONResponse.call_args[0][2])
 
+    def test_exception_saving_payment_meta_data_to_redis(self):
+
+        # Setup test case
+        self.mockPluginManager.get_plugin.return_value.set_payment_meta_data.side_effect = Exception
+
+        Payments.process_payment('id')
+
+        # Validate call counts
+        self.assertEqual(1, self.mockCreateJSONResponse.call_count)
+        self.assertEqual(1, self.mockPayment.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.get_payment_request_meta_data.call_count)
+        self.assertEqual(2, self.mockPyBitcoinTools.script_to_address.call_count)
+        self.assertEqual(2, self.mockSubmitBitcoinTransaction.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_payment_meta_data.call_count)
+        self.assertEqual(0, self.mockCreatePaymentAck.call_count)
+
+        # Validate create_json_response args
+        self.assertFalse(self.mockCreateJSONResponse.call_args[0][0])
+        self.assertEqual('Internal Server Error. Please try again.', self.mockCreateJSONResponse.call_args[0][1])
+        self.assertEqual(500, self.mockCreateJSONResponse.call_args[0][2])
+
 
 class TestCreatePaymentAck(AddressimoTestCase):
     def setUp(self):
@@ -455,6 +477,3 @@ class TestRetrieveRefundAddress(AddressimoTestCase):
             self.mockCreateJSONResponse.call_args[1].get('data')
         )
         self.assertEqual(200, self.mockCreateJSONResponse.call_args[1].get('status'))
-
-
-

@@ -134,7 +134,13 @@ class PRFunctionalTest(LiveServerTestCase):
 
         pr_url = '%s/address/testid/resolve?bip70=true&amount=33000' % self.get_server_url()
 
-        return requests.get(pr_url).content
+        response = requests.get(pr_url)
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual('binary', response.headers.get('content-transfer-encoding'))
+        self.assertEqual('application/bitcoin-paymentrequest', response.headers.get('content-type'))
+
+        return response.content
 
     def create_and_send_payment_message(self, payment_request):
         pr = PaymentRequest()

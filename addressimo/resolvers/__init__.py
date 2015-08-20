@@ -155,7 +155,11 @@ def create_payment_request_response(wallet_addr, amount, id_obj):
         log.info('Creating Addressimo payment_url [ID: %s]' % id_obj.id)
 
         resolver = PluginManager.get_plugin('RESOLVER', config.resolver_type)
-        payment_url_uuid = resolver.set_payment_request_meta_data(id_obj.get_expires(), wallet_addr, amount * 100000000)
+
+        try:
+            payment_url_uuid = resolver.set_payment_request_meta_data(id_obj.get_expires(), wallet_addr, amount * 100000000)
+        except Exception:
+            return create_json_response(False, 'Internal Server Error. Please try again.', 500)
 
     # Setup PaymentRequest
     pr = generate_payment_request(

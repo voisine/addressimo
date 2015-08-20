@@ -658,10 +658,12 @@ class TestCreatePaymentRequestResponse(AddressimoTestCase):
         self.patcher1 = patch('addressimo.resolvers.generate_payment_request')
         self.patcher2 = patch('addressimo.resolvers.Response')
         self.patcher3 = patch('addressimo.resolvers.PluginManager')
+        self.patcher4 = patch('addressimo.resolvers.create_json_response')
 
         self.mockGeneratePR = self.patcher1.start()
         self.mockResponse = self.patcher2.start()
         self.mockPluginManager = self.patcher3.start()
+        self.mockCreateJSONResponse = self.patcher4.start()
 
         # Setup id_obj data
         self.mock_id_obj = Mock()
@@ -683,6 +685,7 @@ class TestCreatePaymentRequestResponse(AddressimoTestCase):
         self.assertEqual(1, self.mockGeneratePR.call_count)
         self.assertEqual(1, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_id_obj.call_count)
+        self.assertEqual(0, self.mockCreateJSONResponse.call_count)
         self.assertEqual(1, self.mockResponse.call_count)
 
         # Validate generate_payment_request call args
@@ -714,6 +717,7 @@ class TestCreatePaymentRequestResponse(AddressimoTestCase):
         self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_id_obj.call_count)
         self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_payment_request_meta_data.call_count)
+        self.assertEqual(0, self.mockCreateJSONResponse.call_count)
         self.assertEqual(1, self.mockResponse.call_count)
 
         # Validate set_payment_request_meta_data call args
@@ -757,6 +761,23 @@ class TestCreatePaymentRequestResponse(AddressimoTestCase):
         self.assertEqual(0, self.mockGeneratePR.call_count)
         self.assertEqual(0, self.mockPluginManager.get_plugin.call_count)
         self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.set_id_obj.call_count)
+        self.assertEqual(0, self.mockPluginManager.get_plugin.return_value.set_payment_request_meta_data.call_count)
+        self.assertEqual(0, self.mockCreateJSONResponse.call_count)
+        self.assertEqual(0, self.mockResponse.call_count)
+
+    def test_exception_saving_payment_meta_data(self):
+
+        # Setup test case
+        self.mock_id_obj.payment_url = None
+        self.mockPluginManager.get_plugin.return_value.set_payment_request_meta_data.side_effect = Exception()
+
+        create_payment_request_response('wallet_addr', 1000, self.mock_id_obj)
+
+        self.assertEqual(0, self.mockGeneratePR.call_count)
+        self.assertEqual(2, self.mockPluginManager.get_plugin.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_id_obj.call_count)
+        self.assertEqual(1, self.mockPluginManager.get_plugin.return_value.set_payment_request_meta_data.call_count)
+        self.assertEqual(1, self.mockCreateJSONResponse.call_count)
         self.assertEqual(0, self.mockResponse.call_count)
 
 class TestReturnUsedBranches(AddressimoTestCase):
