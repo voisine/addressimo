@@ -115,7 +115,10 @@ class Payments:
         # Store Payment meta data used for Refund request
         for tx_hash in bitcoin_tx_hashes:
             refund_list = [x.script.encode('hex') for x in payment.refund_to]
-            resolver.set_payment_meta_data(tx_hash, payment.memo, refund_list)
+            try:
+                resolver.set_payment_meta_data(tx_hash, payment.memo, refund_list)
+            except Exception:
+                return create_json_response(False, 'Internal Server Error. Please try again.', 500)
 
         return Payments.create_payment_ack(request.data)
 
@@ -139,5 +142,9 @@ class Payments:
     def retrieve_refund_address(id, tx):
 
         result = PluginManager.get_plugin('RESOLVER', config.resolver_type).get_refund_address_from_tx_hash(tx)
+
+        if not result:
+            log.info('Refund Output Not Found [TX: %s]' % tx)
+            return create_json_response(success=False, message='Refund Output Not Found For Submitted TX.', status=404)
 
         return create_json_response(success=True, data=result, status=200)

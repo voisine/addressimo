@@ -113,7 +113,6 @@ class RedisResolver(BaseResolver):
             log.info('Unable to Delete IdObject to Redis [ID: %s]: %s' % (id_obj.id, str(e)))
             raise
 
-
     # PaymentRequest Request (PRR) Data Handling
     def add_prr(self, id, prr_data):
 
@@ -162,10 +161,27 @@ class RedisResolver(BaseResolver):
             log.info('Unable to Delete PRR from Queue %s: %s' % (id, str(e)))
             raise
 
+    def cleanup_stale_prr_data(self):
+
+        redis_client = Redis.from_url(config.redis_prr_queue)
+
+        prr_keys = redis_client.keys()
+        log.info('Found %d PRR Keys' % len(prr_keys))
+
+        for key in prr_keys:
+            try:
+                prr = json.loads(redis_client.hgetall(key).values()[0])
+
+                if datetime.fromtimestamp(int(prr.get('submit_date'))) + timedelta(days=config.prr_expiration_days) < datetime.utcnow():
+                    log.info('Deleting Stale PRR [ID: %s]' % key)
+                    redis_client.delete(key)
+            except Exception as e:
+                log.error('Exception Occurred Cleaning Up Stale PRR [ID: %s]: %s' % (key, str(e)))
+
     # Return PaymentRequest (RPR) Data Handling
     def add_return_pr(self, return_pr):
 
-        redis_client = Redis.from_url(config.redis_prr_queue)
+        redis_client = Redis.from_url(config.redis_rpr_data)
 
         try:
             result = redis_client.set(return_pr['id'], json.dumps(return_pr, cls=CustomJSONEncoder))
@@ -177,13 +193,30 @@ class RedisResolver(BaseResolver):
 
     def get_return_pr(self, id):
 
-        redis_client = Redis.from_url(config.redis_prr_queue)
+        redis_client = Redis.from_url(config.redis_rpr_data)
 
         try:
             return json.loads(redis_client.get(id))
         except Exception as e:
             log.info('Unable to Get Return PR %s: %s' % (id, str(e)))
             raise
+
+    def cleanup_stale_return_pr_data(self):
+
+        redis_client = Redis.from_url(config.redis_rpr_data)
+
+        return_pr_keys = redis_client.keys()
+        log.info('Found %d Return PR Keys' % len(return_pr_keys))
+
+        for key in return_pr_keys:
+            try:
+                return_pr = json.loads(redis_client.get(key))
+
+                if datetime.fromtimestamp(int(return_pr.get('submit_date'))) + timedelta(days=config.rpr_expiration_days) < datetime.utcnow():
+                    log.info('Deleting Stale Return PR [ID: %s]' % key)
+                    redis_client.delete(key)
+            except Exception as e:
+                log.error('Exception Occurred Cleaning Up Stale Return PR [ID: %s]: %s' % (key, str(e)))
 
     # Payment Data Handling
     def get_payment_request_meta_data(self, uuid):
@@ -194,7 +227,6 @@ class RedisResolver(BaseResolver):
 
     def set_payment_request_meta_data(self, expiration_date, wallet_addr, amount):
 
-        log.info(config)
         redis_client = Redis.from_url(config.redis_pr_store)
 
         # Only continue if uuid doesn't already exist in Redis
@@ -207,23 +239,66 @@ class RedisResolver(BaseResolver):
             wallet_addr: amount
         }
 
-        redis_client.hmset(payment_url_uuid, {
-            'expiration_date': expiration_date,
-            'payment_validation_data': json.dumps(payment_addresses)
-        })
+        try:
+            redis_client.hmset(payment_url_uuid, {
+                'expiration_date': expiration_date,
+                'payment_validation_data': json.dumps(payment_addresses)
+            })
+
+        except Exception as e:
+            log.info('Exception Saving PaymentRequest Meta Data: %s' % str(e))
+            raise
 
         return payment_url_uuid
+
+    def cleanup_stale_payment_request_meta_data(self):
+
+        redis_client = Redis.from_url(config.redis_pr_store)
+
+        payment_request_keys = redis_client.keys()
+        log.info('Found %d Payment Request Meta Data Keys' % len(payment_request_keys))
+
+        for key in payment_request_keys:
+            try:
+                payment_request = redis_client.hgetall(key)
+                if datetime.utcnow() > datetime.fromtimestamp(int(payment_request.get('expiration_date'))):
+                    log.info('Deleting Stale Payment Request [UUID: %s]' % key)
+                    redis_client.delete(key)
+            except Exception as e:
+                log.error('Exception Occurred Cleaning Up Stale Payment Request Meta Data [UUID: %s]: %s' % (key, str(e)))
 
     def set_payment_meta_data(self, tx_hash, memo, refund_address):
 
         redis_client = Redis.from_url(config.redis_payment_store)
 
-        redis_client.hmset(tx_hash, {
-            'memo': memo,
-            'refund_to': refund_address,
-            # TODO: Add days to config
-            'expiration_date': int(mktime((datetime.utcnow() + timedelta(days=61)).timetuple()))
-        })
+        try:
+            redis_client.hmset(tx_hash, {
+                'memo': memo,
+                'refund_to': refund_address,
+                'expiration_date': int(
+                    mktime((datetime.utcnow() + timedelta(days=config.bip70_payment_expiration_days)).timetuple())
+                )
+            })
+
+        except Exception as e:
+            log.info('Exception Saving Payment Meta Data: %s' % str(e))
+            raise
+
+    def cleanup_stale_payment_meta_data(self):
+
+        redis_client = Redis.from_url(config.redis_payment_store)
+
+        payment_keys = redis_client.keys()
+        log.info('Found %d Payment Meta Data Keys' % len(payment_keys))
+
+        for key in payment_keys:
+            try:
+                payment = redis_client.hgetall(key)
+                if datetime.utcnow() > datetime.fromtimestamp(int(payment.get('expiration_date'))):
+                    log.info('Deleting Stale Payment [UUID: %s]' % key)
+                    redis_client.delete(key)
+            except Exception as e:
+                log.error('Exception Occurred Cleaning Up Stale Payment Meta Data [UUID: %s]: %s' % (key, str(e)))
 
     def get_refund_address_from_tx_hash(self, tx_hash):
 

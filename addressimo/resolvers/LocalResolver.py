@@ -132,12 +132,18 @@ rFhAxdbeHjwhElfusbIPLl8jNikPKYIjynm3P+4oTU8jzSqF6FiOTA==
     def delete_prr(self, id, prr_id):
         return
 
+    def cleanup_stale_prr_data(self):
+        return
+
     # Return PaymentRequest (RPR) Data Handling
     def add_return_pr(self, return_pr):
         return
 
     def get_return_pr(self, id):
         return self.local_return_pr
+
+    def cleanup_stale_return_pr_data(self):
+        return
 
     # Payment Data Handling
     def get_payment_request_meta_data(self, uuid):
@@ -146,7 +152,13 @@ rFhAxdbeHjwhElfusbIPLl8jNikPKYIjynm3P+4oTU8jzSqF6FiOTA==
     def set_payment_request_meta_data(self, expiration_date, wallet_addr, amount):
         return
 
+    def cleanup_stale_payment_request_meta_data(self):
+        return
+
     def set_payment_meta_data(self, tx_hash, memo, refund_address):
+        return
+
+    def cleanup_stale_payment_meta_data(self):
         return
 
     def get_refund_address_from_tx_hash(self, tx_hash):

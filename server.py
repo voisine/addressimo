@@ -68,7 +68,7 @@ def resolve_id(id):
     return resolve(id)
 
 @app.route('/address/<id>/resolve', methods=['POST'])
-@limiter.limit("60 per minute")
+@limiter.limit("10 per minute")
 def submit_pr_request(id):
     return PRR.submit_prr(id)
 

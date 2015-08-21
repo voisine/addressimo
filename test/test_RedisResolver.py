@@ -504,6 +504,100 @@ class TestDeletePRR(AddressimoTestCase):
         self.assertEqual(self.prr_id, self.mockRedis.from_url.return_value.hdel.call_args[0][1])
 
 
+class TestCleanupStalePRRData(AddressimoTestCase):
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+        self.patcher2 = patch('addressimo.resolvers.RedisResolver.datetime', wraps=datetime)
+
+        self.mockRedis = self.patcher1.start()
+        self.mockDatetime = self.patcher2.start()
+
+        self.now = self.mockDatetime.utcnow.return_value = datetime.utcnow()
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+        # Setup test data
+        self.submit_id = 'endpoint_id'
+        self.prr_id = 'prr_id'
+
+        self.mockRedis.from_url.return_value.keys.return_value = ['1']
+        self.mockRedisData = {
+            'submit_date': (self.now - timedelta(days=config.prr_expiration_days + 1)).strftime('%s'),
+            'encrypted_payment_request': 'encPR'
+        }
+        self.mockRedis.from_url.return_value.hgetall.return_value.values.return_value = [json.dumps(self.mockRedisData)]
+
+    def test_delete_one_key(self):
+
+        self.rr.cleanup_stale_prr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
+        self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.delete.call_args[0][0])
+
+    def test_delete_two_keys(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.keys.return_value = ['1', '2']
+
+        self.rr.cleanup_stale_prr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(2, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.hgetall.call_args_list[0][0][0])
+        self.assertEqual('2', self.mockRedis.from_url.return_value.hgetall.call_args_list[1][0][0])
+        self.assertEqual(2, self.mockRedis.from_url.return_value.delete.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.delete.call_args_list[0][0][0])
+        self.assertEqual('2', self.mockRedis.from_url.return_value.delete.call_args_list[1][0][0])
+
+    def test_no_keys_to_delete(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.keys.return_value = []
+
+        self.rr.cleanup_stale_prr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.delete.call_count)
+
+    def test_one_key_not_expired(self):
+
+        # Setup test case
+        self.mockRedisData['submit_date'] = self.now.strftime('%s')
+        self.mockRedis.from_url.return_value.hgetall.return_value.values.return_value = [json.dumps(self.mockRedisData)]
+
+        self.rr.cleanup_stale_prr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.delete.call_count)
+
+    def test_exception_deleting_key(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.delete.side_effect = Exception('Delete failed')
+
+        self.rr.cleanup_stale_prr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
+
 class TestAddReturnPR(AddressimoTestCase):
 
     def setUp(self):
@@ -584,6 +678,100 @@ class TestGetReturnPR(AddressimoTestCase):
         self.assertEqual(1, self.mockRedis.from_url.call_count)
         self.assertEqual(1, self.mockRedis.from_url.return_value.get.call_count)
         self.assertEqual('rpr_id', self.mockRedis.from_url.return_value.get.call_args[0][0])
+
+
+class TestCleanupStaleReturnPRData(AddressimoTestCase):
+    def setUp(self):
+
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+        self.patcher2 = patch('addressimo.resolvers.RedisResolver.datetime', wraps=datetime)
+
+        self.mockRedis = self.patcher1.start()
+        self.mockDatetime = self.patcher2.start()
+
+        self.now = self.mockDatetime.utcnow.return_value = datetime.utcnow()
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+        # Setup test data
+        self.submit_id = 'endpoint_id'
+        self.prr_id = 'prr_id'
+
+        self.mockRedis.from_url.return_value.keys.return_value = ['1']
+        self.mockRedisData = {
+            'submit_date': (self.now - timedelta(days=config.rpr_expiration_days + 1)).strftime('%s')
+        }
+        self.mockRedis.from_url.return_value.get.return_value = json.dumps(self.mockRedisData)
+
+    def test_delete_one_key(self):
+
+        self.rr.cleanup_stale_return_pr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.get.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.get.call_args[0][0])
+        self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.delete.call_args[0][0])
+
+    def test_delete_two_keys(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.keys.return_value = ['1', '2']
+
+        self.rr.cleanup_stale_return_pr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(2, self.mockRedis.from_url.return_value.get.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.get.call_args_list[0][0][0])
+        self.assertEqual('2', self.mockRedis.from_url.return_value.get.call_args_list[1][0][0])
+        self.assertEqual(2, self.mockRedis.from_url.return_value.delete.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.delete.call_args_list[0][0][0])
+        self.assertEqual('2', self.mockRedis.from_url.return_value.delete.call_args_list[1][0][0])
+
+    def test_no_keys_to_delete(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.keys.return_value = []
+
+        self.rr.cleanup_stale_return_pr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.get.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.delete.call_count)
+
+    def test_one_key_not_expired(self):
+
+        # Setup test case
+        self.mockRedisData['submit_date'] = self.now.strftime('%s')
+        self.mockRedis.from_url.return_value.get.return_value = json.dumps(self.mockRedisData)
+
+        self.rr.cleanup_stale_return_pr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.get.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.delete.call_count)
+
+    def test_exception_deleting_key(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.delete.side_effect = Exception('Delete failed')
+
+        self.rr.cleanup_stale_return_pr_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.get.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
 
 
 class TestGetPaymentRequestMetaData(AddressimoTestCase):
@@ -673,6 +861,121 @@ class TestSetPaymentRequestMetaData(AddressimoTestCase):
             self.mockRedis.from_url.return_value.hmset.call_args[0][1]
         )
 
+    def test_exception_saving_to_redis(self):
+
+        # Setup Test Case
+        self.mockRedis.from_url.return_value.hmset.side_effect = Exception('Save Failed')
+
+        self.assertRaises(
+            Exception,
+            self.rr.set_payment_request_meta_data,
+            int(self.now.strftime('%s')),
+            'wallet_addr',
+            'amount'
+        )
+
+        # Validate call count
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hkeys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hmset.call_count)
+
+        # Validate Redis call data
+        self.assertEqual('abc123abc123', self.mockRedis.from_url.return_value.hkeys.call_args[0][0])
+
+        self.assertEqual('abc123abc123', self.mockRedis.from_url.return_value.hmset.call_args[0][0])
+        self.assertDictEqual(
+            {'expiration_date': int(self.now.strftime('%s')), 'payment_validation_data': '%s' % json.dumps({'wallet_addr': 'amount'})},
+            self.mockRedis.from_url.return_value.hmset.call_args[0][1]
+        )
+
+
+class TestCleanupStalePaymentRequestMetaData(AddressimoTestCase):
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+        self.patcher2 = patch('addressimo.resolvers.RedisResolver.datetime', wraps=datetime)
+
+        self.mockRedis = self.patcher1.start()
+        self.mockDatetime = self.patcher2.start()
+
+        self.now = self.mockDatetime.utcnow.return_value = datetime.utcnow()
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+        # Setup test data
+        self.mockRedis.from_url.return_value.keys.return_value = ['1']
+        self.mockRedisData = {'expiration_date': (self.now - timedelta(days=1)).strftime('%s')}
+        self.mockRedis.from_url.return_value.hgetall.return_value = self.mockRedisData
+
+    def test_delete_one_key(self):
+
+        self.rr.cleanup_stale_payment_request_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
+        self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.delete.call_args[0][0])
+
+    def test_delete_two_keys(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.keys.return_value = ['1', '2']
+
+        self.rr.cleanup_stale_payment_request_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(2, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.hgetall.call_args_list[0][0][0])
+        self.assertEqual('2', self.mockRedis.from_url.return_value.hgetall.call_args_list[1][0][0])
+        self.assertEqual(2, self.mockRedis.from_url.return_value.delete.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.delete.call_args_list[0][0][0])
+        self.assertEqual('2', self.mockRedis.from_url.return_value.delete.call_args_list[1][0][0])
+
+    def test_no_keys_to_delete(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.keys.return_value = []
+
+        self.rr.cleanup_stale_payment_request_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.delete.call_count)
+
+    def test_one_key_not_expired(self):
+
+        # Setup test case
+        self.mockRedisData = {'expiration_date': (self.now + timedelta(days=1)).strftime('%s')}
+        self.mockRedis.from_url.return_value.hgetall.return_value = self.mockRedisData
+
+        self.rr.cleanup_stale_payment_request_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.delete.call_count)
+
+    def test_exception_deleting_key(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.delete.side_effect = Exception('Delete failed')
+
+        self.rr.cleanup_stale_payment_request_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
+
 
 class TestSetPaymentMetaData(AddressimoTestCase):
 
@@ -702,6 +1005,112 @@ class TestSetPaymentMetaData(AddressimoTestCase):
             {'memo': 'memo', 'refund_to': 'refund_address', 'expiration_date': int(mktime((self.now + timedelta(days=61)).timetuple()))},
             self.mockRedis.from_url.return_value.hmset.call_args[0][1]
         )
+
+    def test_exception_saving_to_redis(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.hmset.side_effect = Exception('Save Failed')
+
+        self.assertRaises(Exception, self.rr.set_payment_meta_data, 'tx_hash', 'memo', 'refund_address')
+
+        # Validate call count
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hmset.call_count)
+
+        # Validate Redis call data
+        self.assertEqual('tx_hash', self.mockRedis.from_url.return_value.hmset.call_args[0][0])
+        self.assertDictEqual(
+            {'memo': 'memo', 'refund_to': 'refund_address', 'expiration_date': int(mktime((self.now + timedelta(days=61)).timetuple()))},
+            self.mockRedis.from_url.return_value.hmset.call_args[0][1]
+        )
+
+
+class TestCleanupStalePaymentMetaData(AddressimoTestCase):
+    def setUp(self):
+        self.patcher1 = patch('addressimo.resolvers.RedisResolver.Redis')
+        self.patcher2 = patch('addressimo.resolvers.RedisResolver.datetime', wraps=datetime)
+
+        self.mockRedis = self.patcher1.start()
+        self.mockDatetime = self.patcher2.start()
+
+        self.now = self.mockDatetime.utcnow.return_value = datetime.utcnow()
+
+        # Setup redis resolver
+        self.rr = RedisResolver()
+
+        # Setup test data
+        self.mockRedis.from_url.return_value.keys.return_value = ['1']
+        self.mockRedisData = {'expiration_date': (self.now - timedelta(days=1)).strftime('%s')}
+        self.mockRedis.from_url.return_value.hgetall.return_value = self.mockRedisData
+
+    def test_delete_one_key(self):
+
+        self.rr.cleanup_stale_payment_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.hgetall.call_args[0][0])
+        self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.delete.call_args[0][0])
+
+    def test_delete_two_keys(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.keys.return_value = ['1', '2']
+
+        self.rr.cleanup_stale_payment_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(2, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.hgetall.call_args_list[0][0][0])
+        self.assertEqual('2', self.mockRedis.from_url.return_value.hgetall.call_args_list[1][0][0])
+        self.assertEqual(2, self.mockRedis.from_url.return_value.delete.call_count)
+        self.assertEqual('1', self.mockRedis.from_url.return_value.delete.call_args_list[0][0][0])
+        self.assertEqual('2', self.mockRedis.from_url.return_value.delete.call_args_list[1][0][0])
+
+    def test_no_keys_to_delete(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.keys.return_value = []
+
+        self.rr.cleanup_stale_payment_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.delete.call_count)
+
+    def test_one_key_not_expired(self):
+
+        # Setup test case
+        self.mockRedisData = {'expiration_date': (self.now + timedelta(days=1)).strftime('%s')}
+        self.mockRedis.from_url.return_value.hgetall.return_value = self.mockRedisData
+
+        self.rr.cleanup_stale_payment_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(0, self.mockRedis.from_url.return_value.delete.call_count)
+
+    def test_exception_deleting_key(self):
+
+        # Setup test case
+        self.mockRedis.from_url.return_value.delete.side_effect = Exception('Delete failed')
+
+        self.rr.cleanup_stale_payment_meta_data()
+
+        # Validate calls and counts
+        self.assertEqual(1, self.mockRedis.from_url.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.keys.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.hgetall.call_count)
+        self.assertEqual(1, self.mockRedis.from_url.return_value.delete.call_count)
 
 
 class TestGetRefundAddressFromTxHash(AddressimoTestCase):
