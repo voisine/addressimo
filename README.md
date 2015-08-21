@@ -12,11 +12,11 @@ FORMAT: 1A
 
 # Overview
 
-*Addressimo* is an address service. While there are many ways to generate and/or receive an address, the end result is that
-the requesting entity is given an address to which they can send value.  The value of a service such as *Addressimo* is that
- it can help to provide additional security and privacy.
+*Addressimo* is an address service. While there are many ways to generate and/or receive an address, the end result always involves
+the requesting entity recvieving an address to which they can send value.  The value of a service such as *Addressimo* is that
+ it helps to provide additional security and privacy surrounding address generation / requests.
  
-Quite simply, a wallet can receive an address of some sort just by making an address request like this:
+Quite simply, a wallet can receive different address types just by making an address request like this:
 
 **https://addressimo_site_url/address/{id}/resolve**
  
@@ -40,7 +40,7 @@ Quite simply, a wallet can receive an address of some sort just by making an add
 * [PaymentRequest Request](#prr-anchor) 
 
 <a name="static-anchor"/>
-A **Static Address** is a single, non-changing address. It is generally not considered best practice to use static addresses,
+A **Static Address** is a single, non-changing address. Due to the potential for privacy leaks, it is generally not considered best practice to use static addresses,
  but some wallets may only support a single, static address.
 
 <a name="bip32-anchor"/>
@@ -50,13 +50,13 @@ index will be tried for *[BIP0032](https://github.com/bitcoin/bips/blob/master/b
 
 <a name="pr-anchor"/>
 **BIP0070 PaymentRequest** generation can use wallet addresses based on a *static wallet address* or a 
-*[BIP0032](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)* generated wallet address that is generated based 
+*[BIP0032](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)* wallet address that is generated based 
 on the logic previously explained. *[BIP0070 PaymentRequests](https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki)* are 
 created and signed on demand using the endpoint's configured private key (or configured signer plugin) and x509 cert.
 
 <a name="bituri-anchor"/>
 The **Bitcoin URI** is defined in [BIP0021](https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki), with extensions
- to it defined in [BIP0072](https://github.com/bitcoin/bips/blob/master/bip-0072.mediawiki) made in order to support 
+ defined in [BIP0072](https://github.com/bitcoin/bips/blob/master/bip-0072.mediawiki) in order to support 
  [BIP0070](https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki) PaymentRequests and later PaymentRequest extensions. 
  The Bitcoin URI was created *"to enable users to easily make payments by simply clicking links on webpages or scanning QR Codes".*
  
@@ -92,15 +92,15 @@ does not have the necessary information to handle Payment validation for [Store 
 ## Store & Forward
 
 Additionally, *Addressimo* can act as a **Store & Forward** server for **pre-signed** PaymentRequests. This is particularly useful for purely
-mobile wallets that would otherwise need to be online to create and sign *PaymentRequests*. The *Store & Forward* functionality is as follows:
+mobile wallets that would otherwise need to be online in order to create and sign *PaymentRequests*. The *Store & Forward* functionality is as follows:
 
 * Register an endpoint
 * Add Stored PaymentRequests
 * Get Available PaymentRequest Count
 * Delete Endpoint
 
-The **Store & Forward PaymentRequests** are available in the same way as the create and sign on demand *PaymentRequests* are retrieved
-in the general *Addressimo* address lookup request (described in the top of this document and documented below).
+The **Store & Forward PaymentRequests** are available in the same way as the create and sign on demand *PaymentRequests*, 
+and are retrieved in the general *Addressimo* address lookup request (described in the top of this document and documented below).
 
 <a name="prr-anchor"/>
 ## PaymentRequest Requests
@@ -113,7 +113,7 @@ in the general *Addressimo* address lookup request (described in the top of this
 | RPR       | Return PaymentRequest     | A PaymentRequest returned based on a PRR      |
 
 ### Functionality
-PaymentRequest Request (PRR) and Return PaymentRequests (RPR) compromise a set of functionality to allow parties to make a request 
+PaymentRequest Request (PRR) and Return PaymentRequests (RPR) comprise a set of functionality that allows parties to make a request 
 for a PaymentRequest (PRR) and return at a later time to retrieve a PaymentRequest. This allows for two parties to exchange 
 an encrypted PaymentRequest without exposing the PaymentRequest details to 3rd parties or *Addressimo*. This functionality 
 is enabled when the prr_only configuration flag is enabled for an endpoint.
@@ -135,7 +135,7 @@ The process that defines this interaction is described here:
 
 ### Systemic Improvements
 
-1. **Prevent Key Leakage:** Since the receiver has to approve and create a PaymentRequest they are only giving a payment address to the sender if they approve the PaymentRequest.
+1. **Prevent Key Leakage:** Since the receiver has to approve and create a PaymentRequest they are only giving a payment address to the sender *if* they approve the PaymentRequest.
 2. **Prevent PaymentRequests Interception:** The received creates the PaymentRequest and encrypts it such that only the sender can decrypt to PaymentRequest in order to use it.
 
 # Setup
@@ -146,7 +146,7 @@ The process that defines this interaction is described here:
 3. A running Redis service 
 
 **DB SELECTION NOTE:** Redis is used by default, but you can use any datastore you can write resolver code for. To do this, make sure to 
-inherit from BaseResolver and create a PR when complete!
+inherit from BaseResolver and create a PR once complete!
 
 **MEMORY USE NOTE:** A full bitcoin address cache can take 2G+ of space on disk / memory. Please make sure you have enough resources to run the service.
 
@@ -199,8 +199,8 @@ take some time! In order for *Addressimo* to start resolving endpoints, you will
 ### Endpoint Authentication and Request Validation
 
 Authentication and verification for some endpoints are based on [BitPay's](https://bitpay.com/api) signed request process.
-If you're interested in reading through Bitpay's API documentation regarding the X-Identity and X-Signature headers, please
-feel free to check it out [here](https://bitpay.com/api#making-requests).
+If you're interested in reading through Bitpay's API documentation regarding the X-Identity and X-Signature headers, it 
+can be found [here](https://bitpay.com/api#making-requests).
 
 All requests require both the X-Identity and X-Signature headers to be present and valid. The X-Identity header is the hex-encoded
 ECDSA public key for the private key that was used to sign the request. The X-Signature header is the hex-encoded ECDSA signature
