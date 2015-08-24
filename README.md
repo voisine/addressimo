@@ -128,7 +128,7 @@ The process that defines this interaction is described here:
 4. Receiver receives queued requests that include the sender's public key
 5. Receiver creates a PaymentRequest
 6. Receiver generates a secret key for PaymentRequest encryption using [ECDH](https://en.wikipedia.org/wiki/Elliptic_curve_Diffie–Hellman)
-7. Receiver encrypts the PaymentRequest using AES-256 where the encryption key is SHA256(secret key) and IV is the first 16 bytes of SHA256(encryption key)
+7. Receiver encrypts the PaymentRequest using AES-256-ECB where the encryption key is SHA256(secret key)
 8. Receiver submits the encrypted PaymentRequest to *Addressimo*
 9. Sender polls *Addressimo* URL returned in Step 2 for PaymentRequest retrieval
 10. Sender receives PaymentRequest and decrypts using AES-256 and the steps described in steps 6 and 7

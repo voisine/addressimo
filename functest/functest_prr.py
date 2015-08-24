@@ -202,9 +202,8 @@ class PRRFunctionalTest(LiveServerTestCase):
         # Encrypt PR
         # TODO: Perhaps we should use ECIES here? Unfortunately it's not as secure as AES256
         secret_key = hashlib.sha256(str(ecdh_point.x())).digest()
-        iv = hashlib.sha256(secret_key).digest()[0:16]
 
-        encrypt_obj = AES.new(secret_key, AES.MODE_CBC, iv)
+        encrypt_obj = AES.new(secret_key, AES.MODE_ECB)
         ciphertext = encrypt_obj.encrypt(pad(self.serialized_pr))
 
         self.assertEqual(self.payment_id, resp_json.get('requests')[0]['id'])
@@ -258,9 +257,8 @@ class PRRFunctionalTest(LiveServerTestCase):
         # Decrypt PR
         # TODO: Perhaps we should use ECIES here? Unfortunately it's not as secure as AES256
         secret_key = hashlib.sha256(str(decrypt_ecdh_point.x())).digest()
-        iv = hashlib.sha256(secret_key).digest()[0:16]
 
-        decrypt_obj = AES.new(secret_key, AES.MODE_CBC, iv)
+        decrypt_obj = AES.new(secret_key, AES.MODE_ECB)
         decrypt_ciphertext = unpad(decrypt_obj.decrypt(resp_json.get('encrypted_payment_request').decode('hex')))
         self.assertEqual(self.serialized_pr, decrypt_ciphertext)
 
